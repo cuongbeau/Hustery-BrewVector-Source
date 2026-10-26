@@ -1,0 +1,71 @@
+{
+  "id": "hustery-03-bloom-9bar",
+  "label": "Bloom 9 Bar",
+  "type": "pro",
+  "description": "3 bar 5s, pump off 5s, then 9 bar; stop at 36g in final phase or 43s total.",
+  "temperature": 0,
+  "favorite": false,
+  "selected": false,
+  "utility": false,
+  "phases": [
+    {
+      "name": "Pre-infusion",
+      "phase": "preinfusion",
+      "valve": 1,
+      "duration": 5,
+      "pump": {
+        "target": "pressure",
+        "pressure": 3,
+        "flow": 0
+      },
+      "transition": {
+        "type": "linear",
+        "target": "time",
+        "duration": 1,
+        "adaptive": false,
+        "fallback_seconds": 5
+      },
+      "targets": []
+    },
+    {
+      "name": "Soak",
+      "phase": "preinfusion",
+      "valve": 1,
+      "duration": 5,
+      "pump": 0,
+      "transition": {
+        "type": "instant",
+        "target": "time",
+        "duration": 0,
+        "adaptive": false,
+        "fallback_seconds": 5
+      },
+      "targets": []
+    },
+    {
+      "name": "Extract",
+      "phase": "brew",
+      "valve": 1,
+      "duration": 33,
+      "pump": {
+        "target": "pressure",
+        "pressure": 9,
+        "flow": 0
+      },
+      "transition": {
+        "type": "linear",
+        "target": "time",
+        "duration": 4,
+        "adaptive": false,
+        "fallback_seconds": 33
+      },
+      "targets": [
+        {
+          "type": "volumetric",
+          "operator": "gte",
+          "value": 36
+        }
+      ]
+    }
+  ]
+}

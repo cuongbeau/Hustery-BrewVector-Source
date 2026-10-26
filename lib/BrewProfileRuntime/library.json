@@ -1,0 +1,8 @@
+{
+  "name": "BrewProfileRuntime",
+  "version": "0.1.0",
+  "description": "Pinned upstream profile schema, isolated from legacy runtime",
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "dependencies": {"bblanchon/ArduinoJson": "^7.4.3"}
+}

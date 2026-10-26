@@ -1,0 +1,118 @@
+/* Approved profile editor concept: graphite surfaces, cyan selection, compact inspector. */
+#page-prof{flex:1;min-height:0;overflow:auto}
+#profiles_workspace{--profile-bg:#0b1015;--profile-panel:#131c24;--profile-border:#34434d;--profile-muted:#a2afb7;--profile-accent:#24c9ed;display:block;color:#edf3f6;font:15px/1.45 Arial,sans-serif;min-width:0;height:auto}
+#profiles_workspace *{box-sizing:border-box}
+#profiles_workspace [hidden]{display:none!important}
+#profiles_workspace button,#profiles_workspace input,#profiles_workspace select{font:inherit;margin:0}
+#profiles_workspace button{min-height:42px;padding:8px 14px;border:1px solid var(--profile-border);border-radius:6px;background:#182630;color:#e7eff4;cursor:pointer}
+#profiles_workspace button:hover{border-color:var(--profile-accent)}
+#profiles_workspace button:disabled{opacity:.4;cursor:not-allowed}
+#profiles_workspace :focus-visible{outline:2px solid var(--profile-accent);outline-offset:3px}
+#profiles_workspace input,#profiles_workspace select{width:100%;min-width:0;min-height:42px;padding:9px 12px;background:#0e1820;border:1px solid var(--profile-border);border-radius:5px;color:#edf3f6}
+#profiles_workspace label{display:grid;gap:7px;font-size:14px;color:#b5c1c9;min-width:0}
+#profiles_workspace h2,#profiles_workspace h3,#profiles_workspace p{margin:0}
+#profiles_workspace h3{font-size:18px;font-weight:600}
+#profiles_workspace .profile-muted{color:var(--profile-muted);font-size:12px;line-height:1.6}
+#profiles_workspace .profile-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#profiles_workspace .profile-library-head{justify-content:space-between;margin:24px 0 12px}
+#profiles_workspace .profile-row{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--profile-border);padding:22px 4px}
+#profiles_workspace .profile-row b{font-size:17px}
+#profiles_workspace .profile-link{border:0;background:none;color:var(--profile-accent);padding:8px 0}
+#profiles_workspace #profile_edit>.profile-link{min-height:34px;padding:4px 0}
+#profiles_workspace .profile-heading{display:flex;gap:20px;align-items:center;margin:0 0 6px}
+#profiles_workspace .profile-heading-fields{flex:1;min-width:0}
+#profiles_workspace #profile_name{font-size:32px;font-weight:600;background:transparent;border-color:transparent;padding:0 4px;min-height:38px;height:38px}
+#profiles_workspace #profile_desc{font-size:14px;color:var(--profile-muted);background:transparent;border-color:transparent;padding:0 4px;min-height:28px;height:28px}
+#profiles_workspace #profile_name:hover,#profiles_workspace #profile_desc:hover{border-color:var(--profile-border)}
+#profiles_workspace .profile-badge{padding:7px 14px;border:1px solid var(--profile-border);border-radius:20px;white-space:nowrap;font-size:13px}
+#profiles_workspace .profile-menu{position:relative}
+#profiles_workspace .profile-menu>summary{list-style:none;cursor:pointer;font-size:24px;text-align:center;padding:0 12px;min-width:42px;min-height:42px;border:1px solid var(--profile-border);border-radius:6px}
+#profiles_workspace .profile-menu>summary::-webkit-details-marker{display:none}
+#profiles_workspace .profile-menu-items{position:absolute;right:0;top:46px;z-index:8;min-width:180px;padding:6px;background:#17232d;border:1px solid var(--profile-border);border-radius:6px;box-shadow:0 12px 28px #0008}
+#profiles_workspace .profile-menu-items button{display:block;text-align:left;width:100%;border:0;background:none}
+#profiles_workspace .profile-chart,#profiles_workspace .profile-phase-panel,#profiles_workspace .profile-inspector{border:1px solid var(--profile-border);border-radius:7px;background:var(--profile-panel);min-width:0}
+#profiles_workspace .profile-chart{padding:14px 18px 10px;margin-bottom:12px}
+#profiles_workspace .profile-chart-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#profiles_workspace .profile-chart-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;color:var(--profile-muted);font-size:11px}
+#profiles_workspace .profile-chart-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+#profiles_workspace .profile-chart-legend span:before{content:"";width:22px;height:0;border-top:2px solid #24c9ed}
+#profiles_workspace .profile-chart-legend .profile-legend-flow:before{border-color:#efb769}
+#profiles_workspace .profile-chart-legend .profile-legend-limit:before{border-top-style:dashed;border-color:#93a2ac}
+#profiles_workspace #profile_preview{width:100%;overflow:hidden}
+#profiles_workspace #profile_preview svg{display:block;width:100%;height:260px}
+#profiles_workspace #profile_preview [data-pick]{cursor:pointer}
+#profiles_workspace .profile-chart-note{display:block;text-align:center}
+#profiles_workspace .profile-editor-columns{display:grid;grid-template-columns:minmax(230px,29%) minmax(0,1fr);gap:12px;align-items:start}
+#profiles_workspace .profile-phase-panel{padding:10px}
+#profiles_workspace .profile-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 8px 8px}
+#profiles_workspace .profile-phases{display:flex;flex-direction:column;gap:7px}
+#profiles_workspace .profile-phase-row{display:flex;align-items:center;border:1px solid var(--profile-border);border-radius:6px;min-width:0}
+#profiles_workspace .profile-phase-row.profile-active{border-color:var(--profile-accent);background:#123042}
+#profiles_workspace .profile-phase-pick{display:flex;align-items:center;gap:12px;text-align:left;border:0;background:none;flex:1;min-width:0;padding:9px}
+#profiles_workspace .profile-phase-pick>span:last-child{min-width:0}
+#profiles_workspace .profile-phase-pick b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:500}
+#profiles_workspace .profile-phase-pick small{display:block;font-size:12px;color:var(--profile-muted)}
+#profiles_workspace .profile-number{border:1px solid var(--phase-color,var(--profile-accent));border-radius:50%;width:29px;height:29px;display:grid;place-items:center;flex-shrink:0;font-size:14px}
+#profiles_workspace .profile-phase-row .profile-menu>summary{border:0;font-size:21px;padding:0 8px}
+#profiles_workspace .profile-inspector-head{display:flex;align-items:center;gap:12px;padding:7px 18px;border-bottom:1px solid var(--profile-border)}
+#profiles_workspace .profile-inspector-head>span{color:var(--profile-accent);font-size:23px}
+#profiles_workspace #profile_phase_name{font-size:19px;flex:1;width:120px;background:transparent;border-color:transparent;padding:0;min-height:34px}
+#profiles_workspace .profile-inspector-head label{display:flex;align-items:center;gap:10px;font-size:13px}
+#profiles_workspace #profile_kind{width:145px;min-height:34px;padding:4px 8px}
+#profiles_workspace .profile-control{padding:10px 18px}
+#profiles_workspace .profile-control h3{font-size:15px;margin-bottom:8px}
+#profiles_workspace .profile-mode{display:flex;margin-bottom:12px}
+#profiles_workspace .profile-mode button{flex:1;min-height:36px;border-radius:0;background:#111d26;white-space:nowrap;padding:6px}
+#profiles_workspace .profile-mode button:first-child{border-radius:5px 0 0 5px}
+#profiles_workspace .profile-mode button:last-child{border-radius:0 5px 5px 0}
+#profiles_workspace .profile-mode button[aria-pressed=true]{background:#086581;border-color:var(--profile-accent)}
+#profiles_workspace .profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#profiles_workspace .profile-primary-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
+#profiles_workspace .profile-fold{border-top:1px solid var(--profile-border);padding:0 18px}
+#profiles_workspace .profile-fold>summary{padding:13px 0;cursor:pointer;font-size:15px}
+#profiles_workspace .profile-fold>summary small{float:right;color:var(--profile-muted);font-size:12px;font-weight:400;margin:3px 8px}
+#profiles_workspace .profile-fold-body{padding-bottom:16px}
+#profiles_workspace .profile-exits{padding:12px 18px;border-top:1px solid var(--profile-border)}
+#profiles_workspace .profile-exits h3{font-size:15px;margin-bottom:10px}
+#profiles_workspace .profile-timeout{font-size:13px;padding:7px 12px;border:1px solid var(--profile-border);border-radius:5px;color:var(--profile-muted)}
+#profiles_workspace .profile-target{display:grid;grid-template-columns:1.3fr .6fr 1fr 42px;align-items:end;gap:8px;margin:12px 0}
+#profiles_workspace .profile-target button{padding:6px}
+#profiles_workspace .profile-footer{position:sticky;bottom:0;z-index:6;display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px;padding:14px 0;background:var(--profile-bg);border-top:1px solid var(--profile-border)}
+#profiles_workspace #profile_editor_status{width:100%;color:#f0c777;font-size:13px;overflow-wrap:anywhere}
+#profiles_workspace #profile_editor_status:empty{display:none}
+#profiles_workspace .profile-footer>span{margin-right:auto;color:var(--profile-muted);font-size:13px}
+#profiles_workspace #profile_save{background:var(--profile-accent);color:#06252f;font-weight:700;padding:10px 24px}
+#profiles_workspace #profile_status{color:#f0c777;padding:8px 0;overflow-wrap:anywhere}
+#profiles_workspace #profile_status:empty{display:none}
+#profiles_workspace #profile_raw{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 monospace;max-height:300px;overflow:auto}
+@media(max-width:760px){
+ #profiles_workspace .profile-editor-columns{grid-template-columns:1fr}
+ #profiles_workspace .profile-phases{flex-direction:row;overflow-x:auto;padding-bottom:5px}
+ #profiles_workspace .profile-phase-row{min-width:180px}
+ #profiles_workspace .profile-phase-row .profile-menu-items{position:fixed;top:auto;bottom:80px;right:16px}
+ #profiles_workspace .profile-heading{gap:8px;margin:6px 0 12px}
+ #profiles_workspace #profile_name{font-size:23px}
+ #profiles_workspace .profile-badge{display:none}
+ #profiles_workspace .profile-chart{padding:12px 10px}
+ #profiles_workspace .profile-chart-head{flex-wrap:wrap}
+ #profiles_workspace .profile-chart-head h3{font-size:16px}
+ #profiles_workspace .profile-chart-legend{gap:9px;font-size:10px}
+ #profiles_workspace .profile-chart-legend span:before{width:16px}
+ #profiles_workspace #profile_preview svg{height:285px}
+ #profiles_workspace .profile-chart-note{text-align:left;font-size:11px}
+ #profiles_workspace .profile-row{align-items:start;flex-direction:column;gap:12px}
+ #profiles_workspace .profile-footer{flex-wrap:wrap;padding:10px 0 calc(10px + env(safe-area-inset-bottom))}
+ #profiles_workspace .profile-footer>span{width:100%}
+ #profiles_workspace .profile-footer button{flex:1}
+}
+@media(max-width:480px){
+ #profiles_workspace .profile-primary-fields,#profiles_workspace .profile-grid{grid-template-columns:1fr 1fr}
+ #profiles_workspace .profile-primary-fields>label:last-child:nth-child(3){grid-column:1/-1}
+ #profiles_workspace .profile-inspector-head{padding:10px;gap:8px;flex-wrap:wrap}
+ #profiles_workspace .profile-inspector-head label{width:100%;justify-content:space-between}
+ #profiles_workspace .profile-control,#profiles_workspace .profile-exits{padding:12px}
+ #profiles_workspace .profile-fold{padding:0 12px}
+ #profiles_workspace .profile-mode button{font-size:13px}
+ #profiles_workspace .profile-target{grid-template-columns:1fr 1fr}
+ #profiles_workspace .profile-fold>summary small{float:none;display:block;margin-left:16px}
+}

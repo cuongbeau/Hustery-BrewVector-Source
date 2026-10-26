@@ -1,0 +1,182 @@
+{
+  "id": "adaptive-v2-ec2-38g",
+  "label": "Adaptive v2 BrewVector · 38g",
+  "type": "pro",
+  "description": "Adaptive v2 adjusted for the BrewVector 60s shot limit. Light-medium roast, fine grind, 38g target.",
+  "temperature": 93,
+  "favorite": false,
+  "selected": false,
+  "utility": false,
+  "phases": [
+    {
+      "name": "Prefill",
+      "phase": "preinfusion",
+      "valve": 1,
+      "duration": 4,
+      "temperature": 93,
+      "transition": {
+        "type": "ease-out",
+        "target": "time",
+        "duration": 1.5,
+        "adaptive": true,
+        "fallback_seconds": 4
+      },
+      "pump": {
+        "target": "flow",
+        "pressure": 0,
+        "flow": 8
+      },
+      "targets": [
+        {
+          "type": "pumped",
+          "operator": "gte",
+          "value": 100
+        }
+      ]
+    },
+    {
+      "name": "Fill",
+      "phase": "preinfusion",
+      "valve": 1,
+      "duration": 8,
+      "temperature": 93,
+      "transition": {
+        "type": "instant",
+        "target": "time",
+        "duration": 0,
+        "adaptive": true,
+        "fallback_seconds": 8
+      },
+      "pump": {
+        "target": "flow",
+        "pressure": 0,
+        "flow": 8
+      },
+      "targets": [
+        {
+          "type": "pumped",
+          "operator": "gte",
+          "value": 100
+        },
+        {
+          "type": "pressure",
+          "operator": "gte",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "Compressing",
+      "phase": "preinfusion",
+      "valve": 1,
+      "duration": 9,
+      "temperature": 93,
+      "transition": {
+        "type": "ease-out",
+        "target": "time",
+        "duration": 2,
+        "adaptive": true,
+        "fallback_seconds": 9
+      },
+      "pump": {
+        "target": "pressure",
+        "pressure": 3,
+        "flow": 0
+      },
+      "targets": [
+        {
+          "type": "pumped",
+          "operator": "gte",
+          "value": 100
+        },
+        {
+          "type": "flow",
+          "operator": "lte",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "Dripping",
+      "phase": "preinfusion",
+      "valve": 1,
+      "duration": 5,
+      "temperature": 93,
+      "transition": {
+        "type": "ease-out",
+        "target": "time",
+        "duration": 1.5,
+        "adaptive": true,
+        "fallback_seconds": 5
+      },
+      "pump": {
+        "target": "pressure",
+        "pressure": 0.1,
+        "flow": 0
+      },
+      "targets": []
+    },
+    {
+      "name": "Pressurize",
+      "phase": "brew",
+      "valve": 1,
+      "duration": 5,
+      "temperature": 93,
+      "transition": {
+        "type": "linear",
+        "target": "time",
+        "duration": 5,
+        "adaptive": true,
+        "fallback_seconds": 5
+      },
+      "pump": {
+        "target": "pressure",
+        "pressure": 9.5,
+        "flow": 3.5
+      },
+      "targets": [
+        {
+          "type": "pumped",
+          "operator": "gte",
+          "value": 100
+        },
+        {
+          "type": "pressure",
+          "operator": "gte",
+          "value": 8.8
+        }
+      ]
+    },
+    {
+      "name": "Extraction",
+      "phase": "brew",
+      "valve": 1,
+      "duration": 26,
+      "temperature": 93,
+      "transition": {
+        "type": "instant",
+        "target": "time",
+        "duration": 0,
+        "adaptive": true,
+        "fallback_seconds": 26
+      },
+      "pump": {
+        "target": "flow",
+        "pressure": 9.5,
+        "flow": -1
+      },
+      "targets": [
+        {
+          "type": "pumped",
+          "operator": "gte",
+          "value": 100
+        },
+        {
+          "type": "volumetric",
+          "operator": "gte",
+          "value": 38
+        }
+      ]
+    }
+  ]
+}

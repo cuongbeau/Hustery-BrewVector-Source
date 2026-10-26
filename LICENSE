@@ -1,0 +1,17 @@
+Hustery BrewVector — first-party material
+
+Copyright (c) 2026 Hustery BrewVector contributors.
+
+To the extent that contributors own the copyright in material they contribute
+to this project, they offer that material under the Creative Commons
+Attribution-NonCommercial-ShareAlike 4.0 International license (CC BY-NC-SA
+4.0): https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en
+
+This grant does not change the licenses of third-party code or assets. See
+THIRD_PARTY_NOTICES.md and the notices inside lib/. The project name and marks
+are not licensed for endorsement by this notice.
+
+Creative Commons does not recommend CC licenses for software. This notice is
+used here to state the intended noncommercial sharing terms for original
+material while the project contains upstream CC BY-NC-SA material. Anyone
+redistributing a combined build must check all applicable upstream rights.

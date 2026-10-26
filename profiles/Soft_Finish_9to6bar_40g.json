@@ -1,0 +1,94 @@
+{
+  "id": "hustery-soft-finish-9to6-40g",
+  "label": "9 Bar Soft Finish",
+  "type": "pro",
+  "description": "3 bar pre-infusion for 5s, rise to 9 bar over 4s, hold 9 bar for 16s, then decline to 6 bar over 10s. Stop at 40g with a connected scale or after 45s.",
+  "temperature": 0,
+  "favorite": false,
+  "selected": false,
+  "utility": false,
+  "phases": [
+    {
+      "name": "Pre-infusion",
+      "phase": "preinfusion",
+      "valve": 1,
+      "duration": 5,
+      "pump": {
+        "target": "pressure",
+        "pressure": 3,
+        "flow": 0
+      },
+      "transition": {
+        "type": "linear",
+        "target": "time",
+        "duration": 1,
+        "adaptive": false,
+        "fallback_seconds": 5
+      },
+      "targets": []
+    },
+    {
+      "name": "Rise",
+      "phase": "brew",
+      "valve": 1,
+      "duration": 4,
+      "pump": {
+        "target": "pressure",
+        "pressure": 9,
+        "flow": 0
+      },
+      "transition": {
+        "type": "linear",
+        "target": "time",
+        "duration": 4,
+        "adaptive": false,
+        "fallback_seconds": 4
+      },
+      "targets": []
+    },
+    {
+      "name": "Extract",
+      "phase": "brew",
+      "valve": 1,
+      "duration": 16,
+      "pump": {
+        "target": "pressure",
+        "pressure": 9,
+        "flow": 0
+      },
+      "transition": {
+        "type": "instant",
+        "target": "time",
+        "duration": 0,
+        "adaptive": false,
+        "fallback_seconds": 16
+      },
+      "targets": []
+    },
+    {
+      "name": "Finish",
+      "phase": "brew",
+      "valve": 1,
+      "duration": 20,
+      "pump": {
+        "target": "pressure",
+        "pressure": 6,
+        "flow": 0
+      },
+      "transition": {
+        "type": "linear",
+        "target": "time",
+        "duration": 10,
+        "adaptive": false,
+        "fallback_seconds": 20
+      },
+      "targets": [
+        {
+          "type": "volumetric",
+          "operator": "gte",
+          "value": 40
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# PlatformIO build ignore file
+# Các thư mục này không tham gia biên dịch
+
+_archive/
+docs/
+.agents/

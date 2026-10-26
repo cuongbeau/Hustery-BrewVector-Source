@@ -1,0 +1,31 @@
+{
+  "repository": "https://github.com/jniebuhr/gaggimate",
+  "revision": "61cacea506cdc9f8cf5032089a92ba4dd5d4a24a",
+  "files": [
+    {
+      "source": "src/display/models/profile.h",
+      "local": "upstream/profile.h",
+      "sha256": "f2592811e541a589325b910bc09b1b871876af08cd488039f42ab24150db7f72"
+    },
+    {
+      "source": "src/display/core/process/BrewProcess.h",
+      "local": "upstream/process/BrewProcess.h",
+      "sha256": "330b890200dcc4cf5037de1973ddf50c5e7399cec446cd885236ac33cc3ef478"
+    },
+    {
+      "source": "src/display/core/process/Process.h",
+      "local": "upstream/process/Process.h",
+      "sha256": "1fc9a8f09ab2f4e54d8afc0b8bfa0adb0301bff6bb74d717c03e4665585d0bfa"
+    },
+    {
+      "source": "src/display/core/predictive.h",
+      "local": "upstream/process/predictive.h",
+      "sha256": "e35dd509d7deeec1845ec3d07fd196a1070d1daeb3746bfe989f2eb9202f830e"
+    },
+    {
+      "source": "src/display/core/constants.h",
+      "local": "upstream/process/constants.h",
+      "sha256": "4aa52c13ba964480a8adf1ee612333cba8f55fdd7e79232a7e159f2e05e040b9"
+    }
+  ]
+}

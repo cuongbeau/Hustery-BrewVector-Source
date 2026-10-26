@@ -1,0 +1,72 @@
+{
+  "format": "BrewVectorProfiles",
+  "format_version": 1,
+  "profiles": [
+    {
+      "name": "Turbo Fine Ro 60g",
+      "type": 0,
+      "tot_w": 60,
+      "max_t": 50,
+      "note": "Fine Robusta medium turbo. Flow-first profile. Start at 60g yield; tune 50-70g by changing total yield and Turbo Flow exit weight. Main step has no pressure bumper: pressure is only consequence. If choke, add safety P bumper 10.5bar.",
+      "steps": [
+        {
+          "name": "Wet 35",
+          "mode": 2,
+          "target": 35,
+          "ramp": 0,
+          "time": 5000,
+          "b_type": 0,
+          "b_val": -1,
+          "e_type": 2,
+          "e_val": 2.5,
+          "exit": {
+            "p_above": 2.5,
+            "p_below": -1,
+            "f_above": -1,
+            "f_below": -1,
+            "weight": -1,
+            "water": -1
+          }
+        },
+        {
+          "name": "Settle 4b",
+          "mode": 0,
+          "target": 4,
+          "ramp": 0,
+          "time": 3000,
+          "b_type": 0,
+          "b_val": -1,
+          "e_type": 0,
+          "e_val": -1,
+          "exit": {
+            "p_above": -1,
+            "p_below": -1,
+            "f_above": -1,
+            "f_below": -1,
+            "weight": -1,
+            "water": -1
+          }
+        },
+        {
+          "name": "Turbo Flow",
+          "mode": 1,
+          "target": 3.2,
+          "ramp": 1.2,
+          "time": 42000,
+          "b_type": 0,
+          "b_val": -1,
+          "e_type": 1,
+          "e_val": 60,
+          "exit": {
+            "p_above": -1,
+            "p_below": -1,
+            "f_above": -1,
+            "f_below": -1,
+            "weight": 60,
+            "water": -1
+          }
+        }
+      ]
+    }
+  ]
+}

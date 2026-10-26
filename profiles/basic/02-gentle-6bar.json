@@ -1,0 +1,56 @@
+{
+  "id": "hustery-02-gentle-6bar",
+  "label": "Gentle 6 Bar",
+  "type": "pro",
+  "description": "3 bar 5s, ramp to 6 bar in 3s; stop at 36g in final phase or 40s total.",
+  "temperature": 0,
+  "favorite": false,
+  "selected": false,
+  "utility": false,
+  "phases": [
+    {
+      "name": "Pre-infusion",
+      "phase": "preinfusion",
+      "valve": 1,
+      "duration": 5,
+      "pump": {
+        "target": "pressure",
+        "pressure": 3,
+        "flow": 0
+      },
+      "transition": {
+        "type": "linear",
+        "target": "time",
+        "duration": 1,
+        "adaptive": false,
+        "fallback_seconds": 5
+      },
+      "targets": []
+    },
+    {
+      "name": "Extract",
+      "phase": "brew",
+      "valve": 1,
+      "duration": 35,
+      "pump": {
+        "target": "pressure",
+        "pressure": 6,
+        "flow": 0
+      },
+      "transition": {
+        "type": "linear",
+        "target": "time",
+        "duration": 3,
+        "adaptive": false,
+        "fallback_seconds": 35
+      },
+      "targets": [
+        {
+          "type": "volumetric",
+          "operator": "gte",
+          "value": 36
+        }
+      ]
+    }
+  ]
+}

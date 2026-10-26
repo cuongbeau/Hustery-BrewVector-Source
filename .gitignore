@@ -1,0 +1,38 @@
+# PlatformIO output and generated IDE databases
+.pio/
+hmi/.pio/
+compile_commands.json
+
+# Editor/local noise
+.vscode/*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+__pycache__/
+*.pyc
+
+# Local research, backups and generated reports
+/_archive/
+/.agents/
+/.codex_research_control/
+/tmp/
+/output/
+/*.log
+/hmi/*.log
+/hmi-usb-diagnostics.json
+/hmi/include/local_access.h
+/config/local_access.h
+
+# Local project history and superseded design work
+/docs/Walkthrough.md
+/docs/diagnostics/
+/docs/mockups/
+/scripts/package_hustery_web.py
+/hmi/src/web/hustery_assets.generated.h
+/docs/gaggimate_rebuild.md
+/docs/main_tft_cutover.md
+/docs/psm_reset_diagnostic.md
+/docs/web_history_profile_audit_20260911.md
+/docs/mockup_hmi_home.jpg
+/docs/ui/
