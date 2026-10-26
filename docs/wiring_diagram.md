@@ -2,25 +2,41 @@
 
 Source of truth: `config/hardware_pins.h`.
 
-Máy nền được mô tả ở [STOCK_MACHINE.md](STOCK_MACHINE.md). Đây là danh sách
-theo **chức năng trong source**, chưa phải giỏ hàng mua sắm đã kiểm chứng cho
-mọi phiên bản máy. Mã module, điện áp tải và chân vật lý phải đối chiếu với
-linh kiện thực tế trước khi đấu.
+Máy nền được mô tả ở [STOCK_MACHINE.md](STOCK_MACHINE.md). Số lượng dưới đây
+dành cho **một máy** và từ khóa có thể dùng để tìm linh kiện. Đây là gợi ý mua
+theo phần cứng và firmware hiện tại, chưa phải bộ linh kiện đã thử trên mọi
+phiên bản máy. Đối chiếu ảnh, nhãn chân và kích thước với máy của mình trước
+khi đặt.
 
-## Linh kiện
+## Gợi ý mua linh kiện
 
-| Cụm | Linh kiện / vai trò | Trạng thái mã mua hàng |
-|---|---|---|
-| Main | ESP32 DevKit V1 bản 38 chân; môi trường build `esp32dev` | Loại bo theo máy dự án; chưa ghi chip USB-UART/revision |
-| HMI | ESP32-S3 ES3C28P, LCD ILI9341, touch FT6336G | Model bo đã ghi; cần xác nhận revision |
-| Nhiệt | MAX31855 và cặp nhiệt Type K đo thân thermoblock | Cần mã đầu dò/cách gá đã thử |
-| Áp suất | Cảm biến áp suất đọc qua ADS1115 | Cần mã cảm biến, dải áp và nguồn cấp |
-| Bơm | Module dimmer AC RobotDyn điều khiển pha, TXS0102 chuyển mức 3,3/5 V | [Link mua tham khảo (AliExpress, item 32802025086)](https://vi.aliexpress.com/item/32802025086.html); cần đối chiếu biến thể/revision |
-| Heater và lệnh | SSR heater, relay nút shot | Cần mã, thông số điện và mạch tải đã kiểm chứng |
-| Phản hồi van | Module opto/PC817 cho sense | Cần mã module và đặc tính tín hiệu |
-| Thao tác | Encoder xoay kèm nút nhấn | Cần mã cơ khí/đầu nối |
-| Lưu trữ | Thẻ TF phù hợp khe HMI | Cần mức dung lượng đã thử |
-| Tuỳ chọn | Cân BLE tương thích driver Hustery/Acaia/Timemore | Dừng theo gram chỉ dùng khi cân thật hợp lệ |
+### Có thể tìm mua theo mã hoặc loại bo
+
+| Linh kiện | SL | Từ khóa tìm mua | Kiểm tra trước khi đặt |
+|---|---:|---|---|
+| Bo điều khiển Main | 1 | `ESP32 DevKit V1 38 pin` | Đối chiếu nhãn GPIO và vị trí chân với sơ đồ bên dưới; `esp32dev` chỉ là môi trường build, chưa xác nhận chip USB-UART/revision. |
+| Bo HMI có cảm ứng | 1 | `ES3C28P 2.8 inch ESP32-S3 capacitive touch` | Đúng ES3C28P, LCD ILI9341 và touch FT6336G; xác nhận revision. Không chọn biến thể ES3N28P không cảm ứng. [Tài liệu nhà sản xuất](https://www.lcdwiki.com/res/ES3C28P/2.8inch_IPS_ESP32-S3_ES3C28P_ES3N28P_User_Manual.pdf). |
+| Module đọc nhiệt | 1 | `MAX31855 K type thermocouple module` | Chọn module MAX31855 dành cho Type K, có chân CS/CLK/DO; không thay bằng MAX6675 chỉ vì hình giống. |
+| Đầu dò nhiệt | 1 | `ungrounded K type thermocouple probe` | Cần gá chắc lên thân thermoblock; kích thước và kiểu gá chưa được ghi lại. Đầu đo nối vỏ kim loại có thể không phù hợp MAX31855. [Hướng dẫn Adafruit](https://learn.adafruit.com/thermocouple?view=all). |
+| Module ADC áp suất | 1 | `ADS1115 16 bit I2C module` | Đúng ADS1115, không nhầm ADS1015; firmware dùng địa chỉ I²C `0x48` và ngõ A0. Cảm biến áp suất là món riêng ở bảng dưới. |
+| Dimmer bơm | 1 | `RobotDyn AC dimmer 1 channel ZC PSM` | Có chân VCC/GND/Z-C/PSM; đối chiếu phiên bản, điện áp và tải bơm. [Link mua tham khảo do chủ dự án cung cấp](https://vi.aliexpress.com/item/32802025086.html). |
+| Chuyển mức logic | 1 | `TXS0102 2 channel level shifter module` | Có chân VCCA/VCCB/OE; sơ đồ hiện dùng 3,3 V phía ESP32 và 5 V phía dimmer. [Thông số TI](https://www.ti.com/product/TXS0102). |
+| Núm xoay kèm nhấn | 1 | `rotary encoder CLK DT SW push button` | Chọn kiểu trục, núm, chiều dài và cách gá vừa vị trí lắp. |
+| Thẻ nhớ HMI | 1 | `microSD 16GB` | 16 GB là **đề xuất để thử**, chưa ghi nhận dung lượng/định dạng đã kiểm chứng trên bo này. |
+
+### Cần xác nhận trên máy rồi mới chốt mã mua
+
+| Linh kiện | SL tham khảo | Gợi ý tìm kiếm | Thông tin còn thiếu |
+|---|---:|---|---|
+| Cảm biến áp suất nước | 1 | `water pressure transducer 0-20 bar analog` | Ren/cách lắp, nguồn cấp và dải điện áp ngõ ra. Firmware đọc qua ADS1115 và hiệu chuẩn theo điện áp; ngõ vào ADC không được vượt nguồn cấp của ADC. [Giới hạn ADS1115](https://www.ti.com/lit/ds/symlink/ads1115.pdf). |
+| SSR cho heater | 1 | `SSR AC output DC control heater` | Điện áp/công suất heater, điện áp kích thực tế từ mạch điều khiển, tản nhiệt và cách lắp. Chưa xác nhận mã SSR cụ thể. |
+| Relay bấm nút shot | 1 | `single channel dry contact relay active low` | Firmware xuất mức LOW để kích; cần xác nhận module nhận mức điều khiển 3,3 V và tiếp điểm phù hợp mạch nút của máy. |
+| Mạch đọc tín hiệu van | 2 ngõ | `PC817 optocoupler input module` | Firmware có hai tín hiệu sense; phải biết điện áp/dạng tín hiệu của bo zin trước khi chọn module. Không đưa điện lưới trực tiếp vào module PC817 chung chung. |
+
+Cân BLE là **tùy chọn**: chọn loại được driver Hustery/Acaia/Timemore hỗ
+trợ; dừng theo gram chỉ dùng khi HMI nhận mẫu cân hợp lệ. Bơm, heater, van,
+nguồn và phần cơ khí của máy nền không nằm trong danh sách mua thêm này; xem
+[máy nền](STOCK_MACHINE.md) trước khi dùng linh kiện thay thế.
 
 Bo Main đang dùng là ESP32 DevKit V1 **38 chân**. Tên DevKit V1 được dùng cho
 nhiều bo có bố trí hoặc linh kiện phụ khác nhau; trước khi đấu dây phải đối
