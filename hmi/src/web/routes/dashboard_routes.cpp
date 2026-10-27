@@ -768,7 +768,6 @@ void handleHmiTestSound() {
 }
 
 void handleScaleSimulator() {
-  if (!authorized()) return;
   if (!webScaleManager) {
     server.send(503, "application/json", "{\"ok\":false,\"error\":\"Scale manager unavailable\"}");
     return;
@@ -825,7 +824,6 @@ namespace HmiWebInternal {
 
 void registerDashboardRoutes() {
   server.on("/api/hmi/diagnostics",HTTP_GET,[](){
-    if(!authorized())return;
     JsonDocument doc;
     doc["build"]=__DATE__ " " __TIME__;
     doc["uptimeMs"]=millis();doc["freeHeap"]=ESP.getFreeHeap();
@@ -847,7 +845,6 @@ void registerDashboardRoutes() {
     server.send(200,"application/json",body);
   });
   server.on("/api/hmi/restart",HTTP_POST,[](){
-    if(!authorized())return;
     server.sendHeader("Cache-Control","no-store");
     server.send(200,"application/json","{\"ok\":true}");
     server.restartAfterResponse();

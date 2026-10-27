@@ -20,8 +20,6 @@ bool hmiUploadAccepted = false, hmiUploadComplete = false;
 String hmiUploadError;
 void handleUpdatePage() {
 
-  if (!authorized()) return;
-
   server.send(200, "text/html; charset=utf-8",
 
       "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -43,8 +41,6 @@ void handleUpdatePage() {
 
 
 void handleUpdateUpload() {
-
-  if (!server.authenticate(OTA_USER, OTA_PASSWORD)) return;
 
   HTTPUpload& upload = server.upload();
 
@@ -99,8 +95,6 @@ void handleUpdateUpload() {
 
 
 void handleUpdateDone() {
-
-  if (!authorized()) return;
 
   if (!hmiUploadAccepted || !hmiUploadComplete || Update.hasError()) {
 
@@ -161,8 +155,6 @@ String firmwarePageHtml() {
 
 void handleFirmwarePage() {
 
-  if (!authorized()) return;
-
   server.send(200, "text/html; charset=utf-8", firmwarePageHtml());
 
 }
@@ -170,8 +162,6 @@ void handleFirmwarePage() {
 
 
 void handleMainUpdateUpload() {
-
-  if (!server.authenticate(OTA_USER, OTA_PASSWORD)) return;
 
   HTTPUpload& upload = server.upload();
 
@@ -205,8 +195,6 @@ void handleMainUpdateUpload() {
 
 void handleMainUpdateDone() {
 
-  if (!authorized()) return;
-
   if (!mainUploadOk) {
 
     server.send(400, "text/plain", MainFirmwareUpdater::errorText());
@@ -225,8 +213,6 @@ void handleMainUpdateDone() {
 
 void handleMainUpdateStatus() {
 
-  if (!authorized()) return;
-
   server.sendHeader("Cache-Control", "no-store");
 
   server.send(200, "application/json", MainFirmwareUpdater::statusJson());
@@ -236,8 +222,6 @@ void handleMainUpdateStatus() {
 
 
 void handleMainUpdateStart() {
-
-  if (!authorized()) return;
 
   const bool started = MainFirmwareUpdater::startTransfer();
 
@@ -250,8 +234,6 @@ void handleMainUpdateStart() {
 
 
 void handleMainUpdateCancel() {
-
-  if (!authorized()) return;
 
   MainFirmwareUpdater::cancelTransfer();
 

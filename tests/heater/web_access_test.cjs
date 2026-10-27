@@ -1,0 +1,13 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const base='hmi/src/web',routes=fs.readdirSync(base+'/routes').filter(f=>f.endsWith('.cpp'));
+for(const f of ['hmi_web_internal.h','hmi_web_server.cpp',...routes.map(f=>'routes/'+f)]){
+ const s=fs.readFileSync(path.join(base,f),'utf8');assert.doesNotMatch(s,/authorized\(|\.authenticate\(|requestAuthentication\(|OTA_USER|OTA_PASSWORD/,f+' must not challenge Web requests');
+}
+const firmware=fs.readFileSync(base+'/routes/firmware_routes.cpp','utf8');
+for(const guard of ['heaterFresh()','heaterCommandPending()','HeaterWire::Mode::Off','MainFirmwareUpdater::busy()','Update.hasError()','hmiUploadComplete','MainFirmwareUpdater::finishUpload()'])assert.ok(firmware.includes(guard),'OTA state/image guard must remain: '+guard);
+const source=fs.readFileSync(base+'/legacy_hmi_extension.h','utf8').match(/R"JS\(([\s\S]*?)\)JS"/)[1];assert.doesNotMatch(source,/fwAuth|setFirmwareAuth|Authorization|window\.prompt|Nhập mật khẩu OTA/);
+const nodes=new Map(),requests=[],uploads=[];
+const el=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',disabled:false,style:{},files:[{name:'firmware.bin'}]});return nodes.get(id)};
+class Request{constructor(){this.upload={};this.headers={};uploads.push(this)}open(method,url){this.method=method;this.url=url}setRequestHeader(k,v){this.headers[k]=v}send(body){this.body=body}}
+const c={el,window:{addEventListener(){},prompt(){throw Error('must not ask for login')}},document:{createElement:()=>({})},XMLHttpRequest:Request,FormData:class{append(){}},setInterval:()=>1,fetch:async(url,options={})=>{requests.push({url,options});return {ok:true,json:async()=>({state:'ready',progress:0,ready:true,busy:false})}}};vm.createContext(c);vm.runInContext(source,c);
+(async()=>{await c.refreshMainFirmware();assert.equal(requests[0].url,'/main-update/status');assert.equal(el('main_fw_install').disabled,false);c.uploadMainFirmware();c.uploadHmiFirmware();assert.deepEqual(uploads.map(r=>r.url),['/main-update','/update']);assert.ok(uploads.every(r=>Object.keys(r.headers).length===0));uploads[1].status=200;uploads[1].onload();assert.match(el('hmi_fw_status').textContent,/Đã nạp xong/);c.installMainFirmware();c.cancelMainFirmware();await Promise.resolve();assert.ok(requests.some(r=>r.url==='/main-update/start'&&r.options.method==='POST'));assert.ok(requests.some(r=>r.url==='/main-update/cancel'));assert.ok(requests.every(r=>!r.options.headers?.Authorization));console.log('PASS: Web routes have no login challenge, both uploads work without auth headers/prompts, OTA machine/image guards retained.');})().catch(e=>{console.error(e);process.exit(1)});

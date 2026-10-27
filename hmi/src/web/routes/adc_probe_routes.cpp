@@ -10,7 +10,6 @@ void failure(int code, const char* reason) {
   String body; serializeJson(doc, body); server.send(code, "application/json", body);
 }
 void submit() {
-  if (!authorized()) return;
   JsonDocument doc;
   if (deserializeJson(doc, server.arg("plain")) || !doc["request_id"].is<uint32_t>() ||
       !doc["run_id"].is<uint32_t>() || !doc["op"].is<uint8_t>() ||
@@ -30,7 +29,6 @@ void submit() {
   server.send(202, "application/json", "{\"pending\":true}");
 }
 void status() {
-  if (!authorized()) return;
   server.sendHeader("Cache-Control", "no-store");
   if (!pending.requestId || server.arg("id") != String(pending.requestId)) { failure(409, "Yêu cầu đã thay đổi"); return; }
   if (!webMainLink || !webMainLink->connected()) { failure(503, "Main mất kết nối"); return; }
@@ -115,7 +113,7 @@ async function refresh(){await action(async()=>show(await rpc(0)));}refresh();se
 }
 namespace HmiWebInternal {
 void registerAdcProbeRoutes() {
-  server.on("/diagnostics/adc", HTTP_GET, [](){if(authorized())server.send_P(200,"text/html; charset=utf-8",PAGE);});
+  server.on("/diagnostics/adc", HTTP_GET, [](){server.send_P(200,"text/html; charset=utf-8",PAGE);});
   server.on("/api/pressure/adc-probe", HTTP_POST, submit);
   server.on("/api/pressure/adc-probe", HTTP_GET, status);
 }

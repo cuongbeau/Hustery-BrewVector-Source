@@ -26,7 +26,7 @@ Cấu hình build nằm trong `platformio.ini` và `hmi/platformio.ini`; chi ti�
 
 ## Dữ liệu khi nâng cấp
 
-Main dùng `/profiles_brewvector.json` và có thể đọc file profile cũ khi file mới chưa tồn tại. HMI dùng `/brewvector` trên thẻ TF và thử đổi tên thư mục lịch sử cũ trong lần khởi động đầu tiên. AP HMI là `BrewVector-HMI-XXXX`, địa chỉ mDNS là `brewvector-hmi.local`; mật khẩu AP/OTA được cấu hình riêng theo [INSTALL](docs/INSTALL.md).
+Main dùng `/profiles_brewvector.json` và có thể đọc file profile cũ khi file mới chưa tồn tại. HMI dùng `/brewvector` trên thẻ TF và thử đổi tên thư mục lịch sử cũ trong lần khởi động đầu tiên. AP HMI là `BrewVector-HMI-XXXX`, địa chỉ mDNS là `brewvector-hmi.local`; mật khẩu AP được cấu hình riêng theo [INSTALL](docs/INSTALL.md). Web HMI và OTA qua Web truy cập trực tiếp, không yêu cầu đăng nhập.
 
 ## Quyền sử dụng và nguồn gốc
 

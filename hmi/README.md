@@ -31,8 +31,8 @@ AP cai dat se tu tat sau 90 giay khi HMI da vao Wi-Fi nha. Neu mat Wi-Fi trong
 
 ## Nap OTA
 
-Cach don gian nhat la mo `http://brewvector-hmi.local/update`, dang nhap
-`admin` / mat khau `BREWVECTOR_OTA_PASSWORD` trong `include/local_access.h`, sau do chon file:
+Cach don gian nhat la mo `http://brewvector-hmi.local/update` roi chon file.
+Web HMI, PID, System va OTA qua Web khong yeu cau dang nhap:
 
 `hmi/.pio/build/esp32-s3-devkitc-1/firmware.bin`
 

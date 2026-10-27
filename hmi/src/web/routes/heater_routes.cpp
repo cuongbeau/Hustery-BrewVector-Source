@@ -8,7 +8,6 @@ using namespace HmiWebInternal;
 namespace {
 uint32_t nextTicket = 0;
 void state() {
-  if (!authorized()) return;
   StaticJsonDocument<2048> d;
   bool online = webMainLink && webMainLink->heaterFresh();
   d["online"] = online;
@@ -62,7 +61,6 @@ void state() {
   server.send(200, "application/json", body);
 }
 void command() {
-  if (!authorized()) return;
   StaticJsonDocument<768> d;
   if (deserializeJson(d, server.arg("plain")) || !d["op"].is<int>()) { server.send(400, "text/plain", "Invalid request"); return; }
   const int op = d["op"].as<int>();
@@ -180,7 +178,6 @@ function download(){const keys=['localTime','uptime','raw','filtered','target','
 namespace HmiWebInternal {
 void registerHeaterRoutes() {
   server.on("/heater", HTTP_GET, [](){
-    if(!authorized())return;
     server.sendHeader("Location", "/#heater", true);
     server.send(302, "text/plain", "PID heater moved to the main interface");
   });

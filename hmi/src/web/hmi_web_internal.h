@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include "local_access.h"
 #include "web/owner_web_server.h"
 
 class MainLink;
@@ -14,8 +13,6 @@ class ScaleManager;
 
 namespace HmiWebInternal {
 
-constexpr char OTA_USER[] = "admin";
-constexpr char OTA_PASSWORD[] = BREWVECTOR_OTA_PASSWORD;
 
 extern OwnerWebServer server;
 extern bool mainUploadOk;
@@ -30,7 +27,6 @@ extern ScaleManager* webScaleManager;
 String htmlEscape(const char* source);
 String jsonEscape(const char* source);
 const char* machineStateName(uint8_t raw);
-bool authorized();
 
 void registerDashboardRoutes();
 void registerPumpDiagnosticRoutes();

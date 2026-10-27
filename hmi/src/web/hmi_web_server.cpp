@@ -55,11 +55,6 @@ const char* machineStateName(uint8_t raw) {
 }
 
 
-bool authorized() {
-  if (server.authenticate(OTA_USER, OTA_PASSWORD)) return true;
-  server.requestAuthentication();
-  return false;
-}
 
 
 }  // namespace HmiWebInternal

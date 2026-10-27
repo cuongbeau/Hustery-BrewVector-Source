@@ -28,7 +28,7 @@ Copy-Item config/local_access.example.h config/local_access.h
 Copy-Item hmi/include/local_access.example.h hmi/include/local_access.h
 ```
 
-Chọn mật khẩu AP Recovery Main, AP HMI và OTA HMI khác mật khẩu mẫu; mỗi mật khẩu
+Chọn mật khẩu AP Recovery Main và AP HMI khác mật khẩu mẫu; mỗi mật khẩu
 AP phải có 8–63 ký tự theo yêu cầu Wi-Fi. Đổi cờ `*_CONFIGURED` thành `1` ở cả
 hai file. Hai file `local_access.h` được Git bỏ qua; không đưa mật khẩu thật vào
 commit, issue hoặc ảnh chụp màn hình. Mật khẩu mới chỉ có hiệu lực khi nạp
@@ -64,7 +64,9 @@ Chỉ nạp khi đã kiểm tra đúng bo và không có phiên pha/xả đang c
 HMI phát AP `BrewVector-HMI-XXXX`, dùng mật khẩu trong `hmi/include/local_access.h`; mở
 `http://192.168.4.1` để nhập Wi-Fi 2.4 GHz. Khi HMI kết nối mạng, có thể thử
 `http://brewvector-hmi.local`; dùng IP hiển thị trên HMI nếu `.local` không được
-phân giải. OTA dùng tài khoản `admin` và mật khẩu OTA trong file cấu hình HMI.
+phân giải. Web HMI, PID, System, chẩn đoán và OTA qua Web không yêu cầu tài khoản
+hoặc mật khẩu đăng nhập. Thiết bị truy cập được địa chỉ HMI có thể sử dụng các
+trang/API này. Mật khẩu AP chỉ dùng khi kết nối vào Wi-Fi do HMI phát.
 
 Sau đó làm theo [hướng dẫn sử dụng](user_manual.md), đặc biệt là hiệu chỉnh
 zero/áp, nhiệt và Q1/Q9. Các giá trị hiệu chỉnh từ máy khác chỉ là ví dụ; không
@@ -77,5 +79,7 @@ profile chỉ dừng theo thời gian/điều kiện khác.
 - Main ESP32 và HMI ESP32-S3 đã build thành công với PlatformIO ngày
   2026-10-26; chưa xác nhận việc nạp hoặc chuyển dữ liệu profile/lịch sử trên
   thiết bị.
+- HMI với trình tạo/chỉnh sửa profile tại chỗ và Web không đăng nhập đã build
+  thành công ngày 27/10/2026; chưa nạp/xác minh phần cứng trong lượt triển khai này.
 - Bảng linh kiện còn thiếu mã mua hàng của một số cảm biến, module công suất,
   nguồn và đầu nối. Xem cột trạng thái trong [sơ đồ đấu dây](wiring_diagram.md).

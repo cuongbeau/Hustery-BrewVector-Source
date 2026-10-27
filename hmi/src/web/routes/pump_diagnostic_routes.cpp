@@ -42,7 +42,6 @@ void sendResetStatus(int code) {
 }
 
 void requestReset() {
-  if (!authorized()) return;
   refreshResetResult();
   if (strcmp(resetResult, "pending") == 0) {
     sendResetStatus(409);
@@ -97,12 +96,10 @@ button.onclick=async()=>{
 namespace HmiWebInternal {
 void registerPumpDiagnosticRoutes() {
   server.on("/diagnostics/pump", HTTP_GET, []() {
-    if (!authorized()) return;
     server.send_P(200, "text/html; charset=utf-8", PAGE);
   });
   server.on("/api/pump/reset-stopped", HTTP_POST, requestReset);
   server.on("/api/pump/reset-stopped", HTTP_GET, []() {
-    if (!authorized()) return;
     refreshResetResult();
     sendResetStatus(200);
   });

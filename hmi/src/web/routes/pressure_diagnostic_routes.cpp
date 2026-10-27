@@ -16,7 +16,6 @@ void error(int code, const char* text) {
   server.send(code, "application/json", body);
 }
 void submit() {
-  if (!authorized()) return;
   JsonDocument doc;
   if (deserializeJson(doc, server.arg("plain")) ||
       !doc["request_id"].is<uint32_t>() || !doc["capture_id"].is<uint32_t>() ||
@@ -40,7 +39,6 @@ void submit() {
   server.send(202, "application/json", "{\"pending\":true}");
 }
 void fetchReply() {
-  if (!authorized()) return;
   server.sendHeader("Cache-Control", "no-store");
   const String id = server.arg("id");
   if (!pending.requestId || id != String(pending.requestId)) { error(409, "Request replaced; retry status"); return; }
@@ -158,7 +156,6 @@ refresh();setInterval(refresh,2000);
 namespace HmiWebInternal {
 void registerPressureDiagnosticRoutes() {
   server.on("/diagnostics/pressure", HTTP_GET, [](){
-    if (!authorized()) return;
     server.send_P(200, "text/html; charset=utf-8", PAGE);
   });
   server.on("/api/pressure/capture", HTTP_POST, submit);
