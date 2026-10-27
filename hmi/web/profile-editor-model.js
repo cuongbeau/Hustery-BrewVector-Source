@@ -1,0 +1,25 @@
+// UI projection of the device schema. Never export the standalone mockup schema.
+const profileModes={pressure:{label:'Áp suất',unit:'bar',max:12,color:'#24c9ed'},flow:{label:'Lưu lượng bơm',unit:'ml/s',max:15,color:'#efb769'},power:{label:'Công suất',unit:'%',max:100,color:'#b8a4f5'},off:{label:'Nghỉ',unit:'',max:100,color:'#a2afb7'}};
+function profileModeOf(x){return typeof x.pump==='object'?x.pump.target:x.pump===0?'off':'power';}
+function profileRamp(x){return typeof x.pump==='object'&&x.transition?.type&&x.transition.type!=='instant';}
+function profileValue(x){return typeof x.pump==='object'?x.pump[x.pump.target]:x.pump;}
+function profileRampArrow(x,i){if(!profileRamp(x)||profileValue(x)===-1)return '';const prev=i?profileDraft.phases[i-1].pump:null,from=prev&&typeof prev==='object'?Number(prev[profileModeOf(x)]):0;return Number.isFinite(from)&&from>=0&&profileValue(x)<from?'↘ ':'↗ ';}
+function profileNum(v){return Number(v).toLocaleString('vi-VN',{maximumFractionDigits:2});}
+function profileAxisUnit(x){return x.transition?.target==='volumetric'?'g':x.transition?.target==='pumped'?'ml':'s';}
+function profileTargetShort(t){return `${({volumetric:'Cốc',pressure:'Áp',flow:'Flow',pumped:'Nước'}[t.type])} ${t.operator==='lte'?'≤':'≥'} ${profileNum(t.value)} ${({volumetric:'g',pressure:'bar',flow:'ml/s',pumped:'ml'}[t.type])}`;}
+function profileWaitsForScale(x,p=profileDraft){return p?.type==='standard'&&(x.targets||[]).some(t=>t.type==='volumetric'&&t.value>0);}
+function profileExitShort(x){const ts=x.targets||[];return ts.length?`${ts.length===1?profileTargetShort(ts[0]):ts.length+' điều kiện HOẶC'} · ${profileWaitsForScale(x)?'dự phòng':'tối đa'} ${profileNum(x.duration)} s`:profileRamp(x)?`Ramp ${profileNum(x.transition.duration||x.duration)} ${profileAxisUnit(x)} · ${profileNum(x.duration)} s`:`Sau ${profileNum(x.duration)} s`;}
+function profileDescribe(x,i){const mode=profileModeOf(x),m=profileModes[mode],v=profileValue(x),tr=x.transition||{},last=i===profileDraft.phases.length-1;
+ let text=mode==='off'?'Tắt bơm; giữ nguyên lệnh van.':`${profileRamp(x)?'Ramp đến':'Giữ'} ${v===-1?'mốc lúc vào bước':profileNum(v)+' '+m.unit}.`;
+ if(profileRamp(x))text+=` Từ ${tr.adaptive?'giá trị đo lúc vào bước':'mục tiêu trước đó (bước đầu từ 0)'} trong ${profileNum(tr.duration||x.duration)} ${profileAxisUnit(x)}, rồi giữ mục tiêu.`;
+ if(typeof x.pump==='object'){const k=mode==='pressure'?'flow':'pressure',lim=x.pump[k];if(lim)text+=` Giới hạn ${k==='pressure'?'áp':'flow'} ${lim===-1?'theo mốc đầu bước':profileNum(lim)+' '+profileModes[k].unit}.`;}
+ const exits=(x.targets||[]).map(profileTargetShort);text+=` ${last?'Kết thúc shot':'Sang bước tiếp'} ${exits.length?'khi '+exits.join(' HOẶC ')+' hoặc ':''}sau ${profileNum(x.duration)} s.`;
+ if(profileWaitsForScale(x))text+=' Riêng Standard khi cân hợp lệ: chờ điều kiện gram, thời gian chỉ dùng khi fallback.';
+ return text;
+}
+function profileSetDuration(x,value){const old=x.duration;x.duration=value;if(x.transition&&(x.transition.fallback_seconds===old||x.transition.fallback_seconds>value))x.transition.fallback_seconds=value;}
+function profileSetShape(x,shape){x.transition??={};if(shape==='instant')x.transition.type='instant';else{if(!x.transition.type||x.transition.type==='instant')x.transition.type='linear';if(!(x.transition.duration>0))x.transition.duration=Math.min(3,x.duration);x.transition.target??='time';x.transition.adaptive??=true;}}
+// Inline changes are narrow: preserve every field not explicitly edited.
+function profileFieldSpec(x,key){const mode=profileModeOf(x),limit=mode==='pressure'?'flow':'pressure';return ({target:{label:'Mục tiêu',unit:profileModes[mode].unit,min:0,max:profileModes[mode].max,value:profileValue(x),integer:mode==='power'},duration:{label:profileWaitsForScale(x)?'Thời gian dự phòng':'Thời gian tối đa',unit:'s',min:.1,max:60,value:x.duration},ramp:{label:'Độ dài ramp',unit:profileAxisUnit(x),min:0,max:profileAxisUnit(x)==='s'?60:500,value:x.transition?.duration||0},limit:{label:'Giới hạn '+(limit==='pressure'?'áp suất':'lưu lượng'),unit:profileModes[limit].unit,min:0,max:profileModes[limit].max,value:typeof x.pump==='object'?x.pump[limit]:0}})[key];}
+function profileParseInline(text){const s=String(text).trim();return /^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(s)?Number(s.replace(',','.')):NaN;}
+function profileApplyNumber(p,index,key,value){const x=p.phases[index],s=profileFieldSpec(x,key);if(!s||!Number.isFinite(value)||value<s.min||value>s.max||s.integer&&!Number.isInteger(value))return `${s?.label||'Giá trị'} cần ${s?.integer?'số nguyên ':''}từ ${s?.min} đến ${s?.max} ${s?.unit}.`;if(key==='duration')profileSetDuration(x,value);else if(key==='ramp'){x.transition??={};x.transition.duration=value;}else if(key==='target'){if(typeof x.pump==='object')x.pump[x.pump.target]=value;else x.pump=value;}else if(key==='limit'){if(typeof x.pump!=='object')return 'Chế độ này không có giới hạn bổ sung.';x.pump[x.pump.target==='pressure'?'flow':'pressure']=value;}return '';}

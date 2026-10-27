@@ -1,0 +1,13 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const c={TextEncoder,crypto:{randomUUID:()=> 'generated'},profileDraft:null};vm.createContext(c);
+for(const f of ['profile-validation.js','profile-editor-model.js'])vm.runInContext(fs.readFileSync('hmi/web/'+f,'utf8'),c);
+const p={id:'block-test',label:'Block test',type:'pro',description:'Keep me',temperature:93,favorite:true,phases:[{name:'Brew',phase:'brew',valve:1,duration:15,temperature:94,pump:{target:'flow',flow:2,pressure:10},transition:{type:'ease-out',target:'pumped',duration:20,adaptive:true,fallback_seconds:12},targets:[{type:'volumetric',operator:'gte',value:30}]}]};
+c.profileDraft=JSON.parse(JSON.stringify(p));assert.equal(c.profileValidate(c.profileDraft),'');
+const x=c.profileDraft.phases[0];assert.equal(c.profileModeOf(x),'flow');assert.equal(c.profileValue(x),2);assert.equal(c.profileAxisUnit(x),'ml');assert.match(c.profileExitShort(x),/30 g/);
+c.profileSetShape(x,'instant');assert.equal(x.transition.type,'instant');assert.equal(x.pump.pressure,10);assert.equal(x.transition.target,'pumped');assert.equal(x.targets[0].value,30);assert.equal(x.temperature,94);
+c.profileSetShape(x,'ramp');assert.equal(x.transition.type,'linear');assert.equal(x.transition.duration,20);assert.equal(x.transition.target,'pumped');
+c.profileSetDuration(x,8);assert.equal(x.transition.fallback_seconds,8);assert.equal(c.profileValidate(c.profileDraft),'');
+assert.equal(c.profileModeOf({pump:0}),'off');assert.equal(c.profileModeOf({pump:50}),'power');assert.equal(c.profileRamp({pump:50,transition:{type:'linear'}}),false,'runtime power is immediate');
+c.profileDraft.type='standard';assert.equal(c.profileWaitsForScale(x),true);assert.match(c.profileExitShort(x),/dự phòng/);assert.match(c.profileDescribe(x,0),/Standard/);
+c.profileSetDuration(x,NaN);assert.notEqual(c.profileValidate(c.profileDraft),'','invalid numeric input must not be silently runnable');
+console.log('PASS: canonical fields preserved across shape edits, fallback bounded to phase, mode semantics, Standard timeout semantics, invalid inputs rejected.');

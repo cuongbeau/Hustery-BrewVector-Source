@@ -1,0 +1,13 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const c={TextEncoder,crypto:{randomUUID:()=> 'id'},profileDraft:null};vm.createContext(c);
+for(const name of ['profile-validation.js','profile-editor-model.js'])vm.runInContext(fs.readFileSync('hmi/web/'+name,'utf8'),c);
+const profile={id:'keep',label:'Legacy recipe',type:'standard',description:'Original note',temperature:93,favorite:true,utility:false,selected:true,phases:[{name:'Extract',phase:'preinfusion',valve:1,duration:15,temperature:94,pump:{target:'flow',flow:2,pressure:-1},transition:{type:'ease-out',target:'pumped',duration:20,adaptive:true,fallback_seconds:8},targets:[{type:'volumetric',operator:'gte',value:36}]}]};
+c.profileDraft=JSON.parse(JSON.stringify(profile));
+assert.equal(c.profileParseInline('2,5'),2.5);assert.equal(c.profileParseInline(' 2.5 '),2.5);for(const value of ['',',','x','1e2','Infinity'])assert.ok(Number.isNaN(c.profileParseInline(value)));
+assert.equal(c.profileApplyNumber(c.profileDraft,0,'target',2.5),'');const expected=JSON.parse(JSON.stringify(profile));expected.phases[0].pump.flow=2.5;assert.equal(JSON.stringify(c.profileDraft),JSON.stringify(expected),'editing a visible target must preserve hidden/legacy fields');
+const before=JSON.stringify(c.profileDraft);for(const value of [NaN,Infinity,-1,16])assert.notEqual(c.profileApplyNumber(c.profileDraft,0,'target',value),'');assert.equal(JSON.stringify(c.profileDraft),before,'invalid input must not mutate the recipe');
+assert.equal(c.profileApplyNumber(c.profileDraft,0,'duration',20),'');assert.equal(c.profileDraft.phases[0].transition.fallback_seconds,8,'custom fallback preserved');assert.equal(c.profileDraft.phases[0].transition.target,'pumped');assert.equal(c.profileDraft.type,'standard');
+c.profileDraft.phases[0].transition.fallback_seconds=20;c.profileApplyNumber(c.profileDraft,0,'duration',25);assert.equal(c.profileDraft.phases[0].transition.fallback_seconds,25,'default fallback follows phase timeout');
+c.profileApplyNumber(c.profileDraft,0,'duration',5);assert.equal(c.profileDraft.phases[0].transition.fallback_seconds,5);assert.equal(c.profileValidate(c.profileDraft),'');
+c.profileDraft.phases[0].pump=50;assert.notEqual(c.profileApplyNumber(c.profileDraft,0,'target',30.5),'');assert.equal(c.profileApplyNumber(c.profileDraft,0,'target',30),'');
+console.log('PASS: inline decimal parsing, bounds/integer checks, no mutation on invalid input, legacy JSON preservation and default/custom fallback behavior.');

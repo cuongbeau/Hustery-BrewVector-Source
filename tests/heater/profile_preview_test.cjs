@@ -36,4 +36,10 @@ const switched=context.profilePreviewCurves([
 assert.equal(switched.segments[2].pressure.entry,0);
 assert.equal(switched.segments[2].pressure.points[0][1],0);
 
-console.log('PASS: Profile preview overlays pressure/flow and preserves target, limit and Adaptive semantics.');
+const unfinished=context.profileTargetPoints(0,5,0,9,{type:'linear',duration:30});
+assert.equal(unfinished.at(-1)[0],5);
+assert.equal(unfinished.at(-1)[1],1.5,'a 30 s ramp must not be compressed into a 5 s phase');
+const implicit=context.profileTargetPoints(0,5,0,9,{type:'linear',duration:0});
+assert.equal(implicit[0][1],0,'zero transition length uses phase duration, not an instant jump');
+assert.equal(implicit.at(-1)[1],9);
+console.log('PASS: Profile preview preserves target/limit semantics and does not compress ramps longer than phase duration.');
