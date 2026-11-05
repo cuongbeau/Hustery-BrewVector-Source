@@ -823,6 +823,31 @@ void handleWifiSave() {
 namespace HmiWebInternal {
 
 void registerDashboardRoutes() {
+  server.on("/api/main/diagnostics", HTTP_GET, [](){
+    JsonDocument doc;
+    doc["online"] = webMainLink && webMainLink->mainDiagnosticsFresh();
+    if (webMainLink) {
+      const auto& s = webMainLink->mainDiagnostics();
+      doc["version"] = s.version; doc["build"] = s.build;
+      doc["resetReason"] = s.resetReason; doc["bootId"] = s.bootId; doc["bootCount"] = s.bootCount;
+      doc["uptimeMs"] = s.uptimeMs; doc["freeHeap"] = s.freeHeap;
+      doc["minFreeHeap"] = s.minFreeHeap; doc["largestFreeBlock"] = s.largestFreeBlock;
+      doc["faultCount"] = s.faultCount; doc["faultSaved"] = s.faultSaved != 0;
+      doc["adcFast"] = s.adcFast != 0; doc["adcSingleShot"] = s.adcSingleShot != 0;
+      doc["adcMeanSamples"] = s.adcMeanSamples; doc["adcPollMs"] = s.adcPollMs;
+      if (s.faultCount) {
+        auto f = doc["lastFault"].to<JsonObject>();
+        f["bootId"] = s.lastFault.bootId; f["atMs"] = s.lastFault.atMs;
+        f["fault"] = s.lastFault.fault; f["sampleAgeMs"] = s.lastFault.sampleAgeMs;
+        f["rawC"] = s.lastFault.rawC; f["filteredC"] = s.lastFault.filteredC;
+        f["sensorIssues"] = s.lastFault.sensorIssues; f["sensorFrame"] = s.lastFault.sensorFrame;
+        f["windowErrors"] = s.lastFault.windowErrors; f["windowSamples"] = s.lastFault.windowSamples;
+        f["waterRunning"] = s.lastFault.waterRunning != 0;
+      }
+    }
+    String body; serializeJson(doc, body); server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", body);
+  });
   server.on("/api/hmi/diagnostics",HTTP_GET,[](){
     JsonDocument doc;
     doc["build"]=__DATE__ " " __TIME__;

@@ -49,7 +49,7 @@ constexpr bool cadenceAndStop() {
   Request r;r.op=Op::Enable;c.command(r,100,true);
   for(unsigned n=1;n<=3;++n){c.mainAt=100+n*250;c.sample(90,c.mainAt);c.tick(c.mainAt,false);if(c.s.power!=0)return false;}
   c.mainAt=1100;c.sample(90,1100);c.tick(1100,false);if(c.s.power!=30)return false;
-  c.sample(126,1200);return c.s.fault==Fault::Overtemp&&!c.s.relay&&c.s.power==0;
+  c.sample(126,1200);return c.overtempPending&&c.s.fault==Fault::None&&!c.s.relay&&c.s.power==0;
 }
 constexpr bool integratedFeedforwardGuards() {
   Core c;c.mainAt=100;c.sample(90,100);c.s.config.ceiling=125;
@@ -211,7 +211,7 @@ constexpr bool waterPowerCaps() {
   auto pause=c;pause.mainAt=2601;pause.flowInput(3,true,true,2601);pause.tick(2601,true);
   if(!pause.sensorPaused || pause.s.power!=0 || pause.s.activeMaxPower!=30)return false;
   auto hot=c;hot.mainAt=1110;hot.sample(125,1110);hot.tick(1110,true);
-  if(hot.s.fault!=Fault::Overtemp || hot.s.power!=0)return false;
+  if(!hot.overtempPending || hot.s.fault!=Fault::None || hot.s.power!=0)return false;
   // Withdraw a high cap even when FF already decayed to zero.
   c.feedforward.output=0;c.tick(1110,false);
   if(c.s.power>30 || c.s.activeMaxPower!=30)return false;

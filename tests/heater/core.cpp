@@ -32,7 +32,7 @@ constexpr void advance(Core& c, uint32_t to, bool water=false) {
     c.mainAt=t;c.sample(80,t);c.tick(t,water);
   }
 }
-constexpr bool overtemp() { auto c=prepared();Request r;r.op=Op::Enable;c.command(r,100,true);c.sample(126,300);return c.s.fault==Fault::Overtemp&&c.s.power==0; }
+constexpr bool overtemp() { auto c=prepared();Request r;r.op=Op::Enable;c.command(r,100,true);c.sample(126,300);if(!c.overtempPending || c.s.fault!=Fault::None || c.s.power!=0)return false;c.mainAt=550;c.sample(126,550);c.mainAt=800;c.sample(126,800);return c.s.fault==Fault::Overtemp&&c.s.power==0; }
 constexpr bool testLimit() { auto c=prepared();Request r;r.op=Op::Test;r.testSeconds=1;c.command(r,100,true);c.tick(100,false);if(!c.s.relay)return false;c.mainAt=1100;c.sample(80,1100);c.tick(1100,false);return c.s.mode==Mode::Off&&!c.s.relay; }
 constexpr bool idle() { auto c=prepared();c.s.config.idleMinutes=1;Request r;r.op=Op::Enable;c.command(r,100,true);advance(c,60100);return c.s.mode==Mode::Off&&c.s.idleExpired; }
 constexpr bool waterIdle() { auto c=prepared();c.s.config.idleMinutes=1;Request r;r.op=Op::Enable;c.command(r,100,true);advance(c,60100,true);return c.s.mode==Mode::Pid&&!c.s.idleExpired; }
@@ -47,7 +47,7 @@ static_assert(startup(),"uncommissioned startup OFF");
 static_assert(stale(),"sample stale shutdown");
 static_assert(stalled(),"main-loop watchdog shutdown");
 static_assert(sensor(),"sensor fault latches after recovery");
-static_assert(overtemp(),"raw overtemp bypasses filter");
+static_assert(overtemp(),"persistent raw overtemp confirms without waiting for filter");
 static_assert(testLimit(),"test deadline");
 static_assert(idle(),"idle expires");
 static_assert(waterIdle(),"water resets inactivity");
@@ -103,7 +103,7 @@ constexpr bool relaxedBrewMinimum() {
   c.mainAt=1300;c.sample(118,1300);c.tick(1300,false);
   if(!c.s.ready)return false; // no reset for crossing the old 117C upper band
   c.mainAt=1500;c.sample(125,1500);c.tick(1500,false);
-  return !c.s.ready && c.s.fault==Fault::Overtemp && c.s.power==0;
+  return !c.s.ready && c.overtempPending && c.s.fault==Fault::None && c.s.power==0;
 }
 static_assert(relaxedBrewMinimum(),"100C body readiness tolerates noise but never bypasses overtemp");
 static_assert(preheatOnly(),"enable enters warmup not ready");
@@ -138,6 +138,7 @@ constexpr bool heldPid() {
   c.mainAt=1100;c.tick(1100,false);
   if(c.s.i<=goodI || c.s.power<=0)return false; // 1Hz PID uses held good temperature
   c.mainAt=1350;c.sample(82,1350);c.tick(1350,false);
+  c.mainAt=1600;c.sample(82,1600);c.tick(1600,false);
   return c.s.valid && c.s.filtered>80 && c.s.filtered<82 && c.s.mode==Mode::Pid;
 }
 constexpr bool heldTimeout() {
@@ -167,7 +168,7 @@ constexpr bool overtempAfterHeld() {
   auto c=prepared();Request r;r.op=Op::Enable;c.command(r,100,true);
   c.mainAt=350;c.sample(NAN,350);c.tick(350,false);
   c.mainAt=600;c.sample(126,600);
-  return c.s.fault==Fault::Overtemp && c.s.power==0 && !c.s.relay;
+  return c.overtempPending && c.s.fault==Fault::None && c.s.power==0 && !c.s.relay;
 }
 constexpr bool windowDoesNotReset() {
   auto c=prepared();
@@ -184,7 +185,7 @@ static_assert(heldPid(),"bad read holds temperature; independent 1Hz PID still c
 static_assert(heldTimeout(),"soft pause and hard freshness timeout without further sensor reads");
 static_assert(lateGoodCannotHideTimeout(),"late valid read cannot conceal stale interval");
 static_assert(startupFaultWindow(),"no valid reading cannot enable; eighteenth error latches at startup");
-static_assert(overtempAfterHeld(),"overtemperature still bypasses filter after a tolerated error");
+static_assert(overtempAfterHeld(),"raw overtemperature holds output immediately after a tolerated error");
 static_assert(windowDoesNotReset(),"commands cannot erase sensor window history");
 constexpr bool intermittentRun() {
   auto c=prepared();Request r;r.op=Op::Enable;c.command(r,100,true);
@@ -294,7 +295,7 @@ constexpr bool recoveryCannotBypassFaults() {
   auto c=prepared();Request r;r.op=Op::Enable;c.command(r,100,true);
   keepMain(c,1601);auto hot=c,stalled=c;
   hot.mainAt=2100;hot.sample(126,2100);
-  if(hot.s.fault!=Fault::Overtemp || hot.s.power!=0 || hot.s.relay)return false;
+  if(!hot.overtempPending || hot.s.fault!=Fault::None || hot.s.power!=0 || hot.s.relay)return false;
   stalled.sample(80,2602); // incoming sensor read must not hide dead Main
   if(stalled.s.fault!=Fault::MainStalled || stalled.s.power!=0)return false;
   auto density=prepared();r.op=Op::Enable;density.command(r,100,true);

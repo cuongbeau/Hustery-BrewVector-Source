@@ -1,5 +1,6 @@
 #include "src/communication/hmi_link.h"
 #include "src/hardware/heater_control.h"
+#include "src/hardware/runtime_diagnostics.h"
 #include "protocol/heater_legacy_wire.h"
 #include "src/hardware/sensor_reader.h"
 #include "src/recovery/recovery_portal.h"
@@ -433,6 +434,12 @@ void poll() {
   const uint32_t serviceNowMs = millis();
   FirmwareReceiver::poll(serviceNowMs);
   CommandHandler::poll(nowMs);
+  static uint32_t lastDiagnosticsMs = 0;
+  if (nowMs - lastDiagnosticsMs >= 1000) {
+    const auto diagnostics = RuntimeDiagnostics::snapshot();
+    if (sendFrameIfWritable(HmiProtocol::MessageType::MainDiagnostics, &diagnostics, sizeof(diagnostics)))
+      lastDiagnosticsMs = nowMs;
+  }
   static uint32_t lastHeaterMs = 0;
   if (nowMs - lastHeaterMs >= 500) {
     lastHeaterMs = nowMs;

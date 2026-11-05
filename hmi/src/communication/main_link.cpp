@@ -236,9 +236,17 @@ void MainLink::parseFrames(uint32_t nowMs) {
                       result.transferId, static_cast<unsigned>(result.status),
                       result.profileIndex, result.receivedSteps);
       }
-    } else if (header.type == HmiProtocol::MessageType::HeaterSensorStatus && compatible() && header.payloadLength == sizeof(heaterSensorStatus_)) {
-      HeaterSensorWire::Status s{}; memcpy(&s, rxBuffer_ + sizeof(header), sizeof(s));
-      if (s.version == HeaterSensorWire::VERSION) {
+    } else if (header.type == HmiProtocol::MessageType::MainDiagnostics && compatible() && header.payloadLength == sizeof(mainDiagnostics_)) {
+      MainDiagnosticsWire::Status s{}; memcpy(&s, rxBuffer_ + sizeof(header), sizeof(s));
+      if (s.version == MainDiagnosticsWire::VERSION) {
+        s.build[sizeof(s.build) - 1] = '\0';
+        mainDiagnostics_ = s; mainDiagnosticsAtMs_ = millis(); mainDiagnosticsSeen_ = true;
+      }
+    } else if (header.type == HmiProtocol::MessageType::HeaterSensorStatus && compatible() &&
+               (header.payloadLength == sizeof(heaterSensorStatus_) || header.payloadLength == HeaterSensorWire::V8_SIZE)) {
+      HeaterSensorWire::Status s{}; memcpy(&s, rxBuffer_ + sizeof(header), header.payloadLength);
+      if ((s.version == HeaterSensorWire::VERSION && header.payloadLength == sizeof(s)) ||
+          (s.version == 8 && header.payloadLength == HeaterSensorWire::V8_SIZE)) {
         heaterSensorStatus_ = s; heaterSensorReceivedMs_ = millis(); heaterSensorSeen_ = true;
       }
     } else if (header.type == HmiProtocol::MessageType::HeaterStatus && compatible() && header.payloadLength == sizeof(heaterStatus_)) {

@@ -1,7 +1,8 @@
 #pragma once
 #include <stdint.h>
+#include <stddef.h>
 namespace HeaterSensorWire {
-constexpr uint8_t VERSION = 8;
+constexpr uint8_t VERSION = 9;
 // Optional diagnostic frame; existing heater commands/status remain unchanged.
 #pragma pack(push, 1)
 struct Status {
@@ -24,7 +25,14 @@ struct Status {
   uint8_t flowQualified = 0, inletValveOpen = 0;
   uint16_t pidPeriodMs = 0;
   float inletPressure = 0, inletDuty = 0;
+  // v9 append-only extension; the v8 prefix is unchanged.
+  uint8_t overtempPending = 0;
+  float medianTemperature = 0; // NaN when the median stage is disabled.
+  uint32_t overtempEvents = 0, overtempAt = 0;
+  float overtempPeak = 0;
+  uint16_t overtempConfirmMs = 0;
 };
 #pragma pack(pop)
+constexpr size_t V8_SIZE = offsetof(Status, overtempPending);
 static_assert(sizeof(Status) < 128, "heater diagnostic frame size");
 }

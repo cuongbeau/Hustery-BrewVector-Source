@@ -20,6 +20,7 @@ const specs={
 };
 const groups=[['temperature','Nhiệt độ & an toàn'],['pid','Hệ số PID'],['power','Công suất & tự nghỉ'],['water','Bù nhiệt khi có dòng nước']];
 const $=id=>document.getElementById('heat_'+id);
+const finite=(v,d=1)=>Number.isFinite(v)?v.toFixed(d):'—';
 for(const [group,title] of groups){
  const card=document.createElement('section');card.className='heater-field-group';
  const heading=document.createElement('h4');heading.textContent=title;card.append(heading);
@@ -33,6 +34,21 @@ for(const [group,title] of groups){
 }
 let active=false,initial=false,last=null,rows=[],pending=false,online=false,polling=false,pollTimer=null,pollController=null,commandEpoch=0;
 const modes=['OFF','PID','THỬ CÔNG SUẤT','LỖI'];const faults=['','LỖI CẢM BIẾN','MẪU NHIỆT QUÁ HẠN','QUÁ NHIỆT — NGẮT NGUỒN MÁY','VÒNG LẶP MAIN BỊ TREO'];
+let mainDiagPending=false,mainDiagAt=0;
+const resetReasons={1:'Cấp nguồn',2:'Reset chân ngoài',3:'Reset phần mềm / OTA',4:'Crash / panic',5:'Interrupt watchdog',6:'Task watchdog',7:'Watchdog khác',8:'Thức dậy deep sleep',9:'Sụt nguồn (brownout)',10:'Reset SDIO',11:'USB',12:'JTAG',13:'Lỗi eFuse',14:'Nguồn không ổn định',15:'Lỗi CPU lockup'};
+async function refreshMainDiagnostics(){
+ const e=$('mainDiagnostic');if(!e||mainDiagPending||Date.now()-mainDiagAt<2000)return;
+ mainDiagPending=true;mainDiagAt=Date.now();
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
+ try{
+  const response=await fetch('/api/main/diagnostics',{cache:'no-store',signal:controller.signal});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const s=await response.json();if(!s.online){e.textContent='Chẩn đoán Main chưa có hoặc đã quá hạn; cần firmware hỗ trợ.';return;}
+  const f=s.lastFault;
+  e.textContent=`Main: ${s.build}\nLần khởi động #${s.bootCount} · ID ${s.bootId} · Đã chạy ${(s.uptimeMs/1000).toFixed(0)} giây\nLý do khởi động: ${resetReasons[s.resetReason]||'Mã '+s.resetReason}\nRAM trống ${s.freeHeap} B · Thấp nhất ${s.minFreeHeap} B · Khối trống lớn nhất ${s.largestFreeBlock} B\nADC: ${s.adcSingleShot?'single-shot':'continuous'}, ${s.adcPollMs} ms, trung bình ${s.adcMeanSamples} mẫu\n`+(f?`Lỗi heater gần nhất: ${faults[f.fault]||'Mã '+f.fault}\nXảy ra tại ${f.atMs} ms của lần khởi động ID ${f.bootId}${f.bootId!==s.bootId?' (trước khi Main reset)':''}\nTrạng thái lúc lỗi: ${f.waterRunning?'Đang chạy nước / pha':'Không chạy nước'}\nTuổi mẫu tốt ${f.sampleAgeMs} ms · Lỗi ${f.windowErrors}/${f.windowSamples} mẫu · ${sensorIssues(f.sensorIssues)}\nNhiệt hợp lệ cuối: thô ${f.rawC.toFixed(2)}°C / lọc ${f.filteredC.toFixed(2)}°C\nTổng sự kiện ${s.faultCount} · ${s.faultSaved?'Đã lưu vào bộ nhớ':'Đang giữ trong RTC, chờ máy dừng để lưu'}`:'Chưa ghi nhận lỗi heater từ khi cài chẩn đoán.')+'\nMốc thời gian tính từ lúc Main khởi động, không phải giờ lịch. Bản chưa lưu có thể mất nếu ngắt điện.';
+ }catch(e2){e.textContent='Chưa đọc được chẩn đoán Main: '+e2.message;}
+ finally{clearTimeout(timer);mainDiagPending=false;}
+}
 function controls(){document.querySelectorAll('.heat-mut').forEach(b=>b.disabled=pending||!online);}
 function sensorIssues(mask){const names=[[1,'OC: chip báo hở đầu dò'],[2,'SCG: chip báo chạm GND'],[4,'SCV: chip báo chạm VCC'],[8,'Khung SPI không hợp lệ'],[16,'Nhiệt ngoài dải -20…500°C'],[32,'Không đọc được bus']];return names.filter(([bit])=>mask&bit).map(([,label])=>label).join(' + ')||'Hợp lệ';}
 function renderWindow(s){
@@ -55,13 +71,15 @@ function renderPid(s){
  e.textContent=`PID của BrewVector · Chu kỳ ${s.pidPeriodMs} ms\nBù nhiệt: ${s.feedforwardKff>0?'BẬT':'TẮT'} | FF ${(Number.isFinite(s.thermalFeedforward)?s.thermalFeedforward.toFixed(2):'—')}%\nFlow đầu vào: ${(Number.isFinite(s.inletFlow)?s.inletFlow.toFixed(2):'—')} ml/s | ${s.flowQualified?'ước tính từ duty bơm và áp suất':'chưa đủ điều kiện hoặc ngoài vùng mô hình'}\n${s.sensorPaused?'Tạm dừng cảm biến — công suất 0%.':'Tổng P + I + D + bù nhiệt được giới hạn bởi trần công suất đã cài.'}`;
 }function isSensorPaused(s){return s.online&&!s.fault&&(s.mode===1||s.mode===2)&&s.sensorDiagnosticsFresh&&s.sensorPaused;}
 function renderSensor(s){
+ refreshMainDiagnostics();
  renderPid(s);renderWindow(s);renderPolicy(s);
  const badge=$('diagBadge'),warn=s.online&&s.sensorDiagnosticsFresh&&((s.sensorControlErrors||0)>=(s.sensorControlWarnErrors||Infinity)||!s.valid);
- badge.textContent=s.fault?'Lỗi đã khóa':s.sensorPaused?'Heater tạm dừng':warn?'Có mẫu lỗi':'';
+ badge.textContent=s.fault?'Lỗi đã khóa':s.sensorDiagnosticsFresh&&s.overtempPending?'Chờ xác nhận quá nhiệt':s.sensorDiagnosticsFresh&&s.sensorPaused?'Heater tạm dừng':warn?'Có mẫu lỗi':'';
  badge.className='heater-diagnostic-badge'+(badge.textContent?' visible':'');
  const e=$('sensorDiagnostic');if(!s.online||!s.sensorDiagnosticsFresh){e.textContent='Chẩn đoán cảm biến chưa có hoặc đã quá hạn; cần Main có hỗ trợ.';return;}
  const hex=n=>'0x'+(n>>>0).toString(16).padStart(8,'0').toUpperCase(),totalRatio=s.sensorTotal?(100*s.sensorErrors/s.sensorTotal).toFixed(1)+'%':'—';
  e.textContent=`Mẫu lỗi / tổng: ${s.sensorErrors} / ${s.sensorTotal} (${totalRatio})\nMẫu hiện tại: ${sensorIssues(s.sensorIssues)} | ${hex(s.sensorFrame)}\nLỗi gần nhất: ${s.sensorErrors?sensorIssues(s.sensorLastIssues):'Chưa ghi nhận'} | ${hex(s.sensorLastErrorFrame)} | Main ${s.sensorLastErrorAt} ms\nBộ đếm từ lúc Main khởi động; Xóa lỗi không xóa lịch sử này. Mã chip là dữ liệu quan sát, chưa kết luận phần cứng hỏng.`;
+ if(Number.isFinite(s.overtempConfirmMs))e.textContent+=`\nNhiệt thô ${finite(s.raw)}°C → ${Number.isFinite(s.medianTemperature)?`trung vị 3 mẫu ${finite(s.medianTemperature)}°C → `:''}lọc PID ${finite(s.filtered)}°C.${s.medianTemperature===null?' Bộ lọc 0,3 giây; đã bỏ trung vị.':''}\n${s.overtempPending?'CHỜ XÁC NHẬN QUÁ NHIỆT — công suất 0%, giữ I.':'Không chờ xác nhận quá nhiệt.'} Xác nhận tối thiểu ${s.overtempConfirmMs} ms / 3 mẫu.\nSố lần nghi quá nhiệt từ khi Main bật: ${s.overtempEvents}; lần gần nhất tại ${s.overtempAt} ms, đỉnh thô ${finite(s.overtempPeak)}°C. Phục hồi cần 3 mẫu dưới trần 3°C trong ít nhất 500 ms và cảm biến ổn định.`;
 }
 async function heaterRequest(options={},controller=null){
  controller=controller||(typeof AbortController==='function'?new AbortController():null);
@@ -73,8 +91,7 @@ async function heaterRequest(options={},controller=null){
 async function getState(controller=null){return heaterRequest({},controller);}
 async function send(op){if(op!==0&&pending)return;if(op!==0&&!online){$('reply').textContent='Chưa có dữ liệu Main mới; chờ kết nối.';return;}const epoch=++commandEpoch;pending=true;if(pollController)pollController.abort();controls();try{const b={op};if(op===1)for(const k in specs){const v=Number($(k).value);if(!$(k).value||!Number.isFinite(v))throw Error('Điền đủ thông số');b[k]=v;}if(op===1){b.autoSleep=$('autoSleep').checked;b.ffEnabled=$('ffEnabled').checked;}if(op===3){b.testPower=Number($('testPower').value);b.testSeconds=Number($('testSeconds').value);}const result=await heaterRequest({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});if(epoch!==commandEpoch)return;const t=result.ticket;$('reply').textContent='Chờ Main xác nhận #'+t;for(let n=0;n<8;n++){await new Promise(r=>setTimeout(r,250));if(epoch!==commandEpoch)return;const s=await getState();if(epoch!==commandEpoch)return;if(s.online&&s.ticket===t){$('reply').textContent=s.result===3&&op===4?'Chưa xóa được: cần mẫu nhiệt hợp lệ, còn mới, dưới ngưỡng ngắt và bộ đếm lỗi dưới giới hạn.':s.result===3&&(op===2||op===3)&&s.ceiling<=0?'Chưa cấu hình ngưỡng ngắt quá nhiệt. Heater vẫn OFF.':['Main đã thực hiện','Thông số không hợp lệ','Main bận / cần OFF và Ready','Chưa an toàn hoặc lỗi lưu cấu hình'][s.result];return;}}throw Error('Chưa xác nhận kết quả; không tự gửi lại.');}catch(e){if(epoch===commandEpoch)$('reply').textContent=e.message;}finally{if(epoch===commandEpoch){pending=false;controls();}}}
 function renderLive(s,paused){
- const finite=(v,d=1)=>Number.isFinite(v)?v.toFixed(d):'—';
- const state=s.fault?faults[s.fault]:paused?'Tạm dừng':s.idleExpired?'Tự nghỉ':s.mode===1?(s.ready?'READY':'PREHEAT'):modes[s.mode];
+ const state=s.fault?faults[s.fault]:s.sensorDiagnosticsFresh&&s.overtempPending?'CHỜ XÁC NHẬN QUÁ NHIỆT · GIA NHIỆT OFF':paused?'Tạm dừng':s.idleExpired?'Tự nghỉ':s.mode===1?(s.ready?'READY':'PREHEAT'):modes[s.mode];
  const pid=(Number(s.p)||0)+(Number(s.i)||0)+(Number(s.d)||0),flowOk=s.flowQualified&&Number.isFinite(s.inletFlow);
  $('liveTemp').textContent=finite(s.filtered)+' °C';$('liveTarget').textContent=finite(s.target)+' °C';
  $('livePower').textContent=finite(s.power)+'%';$('liveSsr').textContent=s.relay?'ON':'OFF';$('liveState').textContent=state;
@@ -83,9 +100,21 @@ function renderLive(s,paused){
  $('liveTotal').textContent=finite(s.power)+'% / '+finite(s.activeMaxPower)+'%';
  $('legendTemp').textContent=finite(s.filtered)+' °C';$('legendTarget').textContent=finite(s.target)+' °C';$('legendPower').textContent=finite(s.power)+'%';
 }
+function chartSessionRows(samples){
+ const recent=samples.slice(-600);let start=0,boot;
+ for(let i=0;i<recent.length;i++){
+  if(i&&recent[i].uptime<recent[i-1].uptime){start=i;boot=undefined;}
+  const id=recent[i].mainBootId;
+  if(Number.isInteger(id)){
+   if(boot!==undefined&&id!==boot)start=i;
+   boot=id;
+  }
+ }
+ return recent.slice(start);
+}
 function draw(){
  const c=$('plot'),x=c.getContext('2d'),w=Math.max(300,c.clientWidth),h=240;c.width=w;c.height=h;
- const left=43,right=43,top=16,bottom=31,pw=w-left-right,ph=h-top-bottom,pts=rows.slice(-600);
+ const left=43,right=43,top=16,bottom=31,pw=w-left-right,ph=h-top-bottom,pts=chartSessionRows(rows);
  x.clearRect(0,0,w,h);x.font='10px sans-serif';x.lineWidth=1;
  const tempY=v=>top+(130-v)/(130-20)*ph,powerY=v=>top+(100-v)/100*ph;
  x.strokeStyle='#263543';x.fillStyle='#83909d';x.textBaseline='middle';
@@ -109,21 +138,21 @@ async function poll(){
  const stale=setTimeout(()=>{online=false;controls();$('alarm').className='heater-alarm danger';$('alarm').textContent='ĐANG CHỜ DỮ LIỆU WEB — KHÔNG XÁC NHẬN HEATER ĐÃ TẮT';},2500);
  try{const s=await getState(pollController);if(pending)return;gotState=true;
  if(!s || typeof s.online!=='boolean')throw Error('Phản hồi không hợp lệ');
- if(s.online && ['filtered','raw','target','power','p','i','d'].some(k=>!Number.isFinite(s[k])))throw Error('Thiếu dữ liệu nhiệt/PID');
+ if(s.online && ['uptime','filtered','raw','target','power','p','i','d'].some(k=>!Number.isFinite(s[k])))throw Error('Thiếu dữ liệu nhiệt/PID');
  online=s.online;renderSensor(s);const paused=isSensorPaused(s),bad=!s.online||s.fault;
  $('alarm').className=bad?'heater-alarm danger':paused?'heater-alarm warning':'heater-alarm';
- $('alarm').textContent=!s.online?'MẤT LIÊN LẠC — HEATER CHƯA XÁC NHẬN OFF':s.fault===1&&s.valid&&s.sampleAge<=(s.sensorDiagnosticsFresh?s.sensorPauseGoodAgeMs:1000)?'LỖI CẢM BIẾN · HEATER OFF':s.fault?faults[s.fault]:paused?'HEATER TẠM DỪNG':s.idleExpired?'TỰ NGHỈ':s.mode===1?(s.ready?'READY · PID':'PREHEAT · PID'):modes[s.mode];
+ $('alarm').textContent=!s.online?'MẤT LIÊN LẠC — HEATER CHƯA XÁC NHẬN OFF':s.fault===1&&s.valid&&s.sampleAge<=(s.sensorDiagnosticsFresh?s.sensorPauseGoodAgeMs:1000)?'LỖI CẢM BIẾN · HEATER OFF':s.fault?faults[s.fault]:s.sensorDiagnosticsFresh&&s.overtempPending?'CHỜ XÁC NHẬN QUÁ NHIỆT · GIA NHIỆT OFF':paused?'HEATER TẠM DỪNG':s.idleExpired?'TỰ NGHỈ':s.mode===1?(s.ready?'READY · PID':'PREHEAT · PID'):modes[s.mode];
  if(s.online){
   renderLive(s,paused);
   const applied=$('applied');if(applied)applied.textContent=`Main đã nhận: bù nhiệt ${s.ffEnabled?'BẬT':'TẮT'} · trần giữ ${s.maxPower}% · trần khi chạy nước ${s.waterMaxPower}% · trần đang dùng ${s.activeMaxPower}%`;
   if(!initial){for(const k in specs)$(k).value=s[k];$('autoSleep').checked=s.autoSleep;$('ffEnabled').checked=s.ffEnabled;initial=true;}
-  if(last!==s.uptime){last=s.uptime;rows.push({...s,localTime:new Date().toISOString()});if(rows.length>7200)rows.shift();draw();}
+  if(last!==s.uptime||(Number.isInteger(s.mainBootId)&&rows.length&&s.mainBootId!==rows[rows.length-1].mainBootId)){last=s.uptime;rows.push({...s,localTime:new Date().toISOString()});if(rows.length>7200)rows.shift();draw();}
  }
  }catch(e){if(active&&!pending){online=false;renderSensor({online:false});$('alarm').className='heater-alarm danger';$('alarm').textContent=(gotState?'DỮ LIỆU WEB LỖI':'MẤT KẾT NỐI WEB')+' — HEATER CHƯA XÁC NHẬN OFF';$('liveState').textContent=e.message;}}
  finally{clearTimeout(stale);pollController=null;polling=false;controls();if(active)pollTimer=setTimeout(poll,document.hidden?5000:500);}
 }
 function setActive(value){active=!!value;clearTimeout(pollTimer);if(!active){if(pollController)pollController.abort();return;}if(!polling)pollTimer=setTimeout(poll,0);}
-function download(){const keys=['localTime','uptime','raw','filtered','target','power','p','i','d','relay','mode','fault','sampleAge','idleRemaining','sensorDiagnosticsFresh','sensorSampledAt','sensorErrors','sensorTotal','sensorIssues','sensorLastIssues','sensorWindowReady','sensorWindowSamples','sensorWindowErrors','sensorPeakWindowSamples','sensorPeakWindowErrors','sensorConsecutiveErrors','sensorMaxConsecutiveErrors','sensorEvaluatedWindows','sensorWindowsAtOrAbove20','sensorControlSamples','sensorControlErrors','sensorControlCapacity','sensorControlWarnErrors','sensorControlPauseErrors','sensorControlResumeErrors','sensorControlTripErrors','sensorSamplePeriodMs','sensorMaxGoodAgeMs','sensorPauseGoodAgeMs','sensorPaused','sensorDensityPaused','thermalFeedforward','inletFlow','feedforwardKff','flowQualified','inletValveOpen','pidPeriodMs','heaterW','inletC','ffScale','ffEnabled','waterMaxPower','activeMaxPower','inletPressure','inletDuty'];const blob=new Blob([keys.join(',')+'\n'+rows.map(s=>keys.map(k=>s[k]).join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='heater-'+Date.now()+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}return {send,download,setActive};
+function download(){const keys=['localTime','uptime','raw','filtered','target','power','p','i','d','relay','mode','fault','sampleAge','idleRemaining','sensorDiagnosticsFresh','sensorSampledAt','sensorErrors','sensorTotal','sensorIssues','sensorLastIssues','sensorWindowReady','sensorWindowSamples','sensorWindowErrors','sensorPeakWindowSamples','sensorPeakWindowErrors','sensorConsecutiveErrors','sensorMaxConsecutiveErrors','sensorEvaluatedWindows','sensorWindowsAtOrAbove20','sensorControlSamples','sensorControlErrors','sensorControlCapacity','sensorControlWarnErrors','sensorControlPauseErrors','sensorControlResumeErrors','sensorControlTripErrors','sensorSamplePeriodMs','sensorMaxGoodAgeMs','sensorPauseGoodAgeMs','sensorPaused','sensorDensityPaused','thermalFeedforward','inletFlow','feedforwardKff','flowQualified','inletValveOpen','pidPeriodMs','heaterW','inletC','ffScale','ffEnabled','waterMaxPower','activeMaxPower','inletPressure','inletDuty','mainBootId','medianTemperature','overtempPending','overtempEvents','overtempAt','overtempPeak','overtempConfirmMs'];const blob=new Blob([keys.join(',')+'\n'+rows.map(s=>keys.map(k=>s[k]).join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='heater-'+Date.now()+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}return {send,download,setActive};
 })();
 
 )JS";

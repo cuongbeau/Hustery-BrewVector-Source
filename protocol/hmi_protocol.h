@@ -46,6 +46,7 @@ enum class MessageType : uint8_t {
   HeaterRequest = 0x38,
   HeaterStatus = 0x39,
   HeaterSensorStatus = 0x3A,  // Optional diagnostics; schema 15 unchanged.
+  MainDiagnostics = 0x3B,    // Optional reset/fault history; schema 17 unchanged.
   FirmwareBegin = 0x40,
   FirmwareChunk = 0x41,
   FirmwareEnd = 0x42,

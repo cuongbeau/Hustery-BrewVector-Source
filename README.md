@@ -9,10 +9,8 @@ Bộ điều khiển espresso gồm Main ESP32 và HMI ESP32-S3. Main xử lý c
 3. Làm theo [hướng dẫn sử dụng và hiệu chỉnh](docs/user_manual.md) trước khi pha.
 
 Các sơ đồ công khai hiện chỉ mô tả tín hiệu thấp áp; chưa có sơ đồ công suất AC
-hoàn chỉnh. Bảng linh kiện còn thiếu một số mã mua hàng đã kiểm chứng. Bản
-Firmware Main và HMI đã build thành công bằng PlatformIO ngày 2026-10-26, nhưng
-chưa được xác nhận sau khi nạp lên máy. Đây là source chia sẻ để cùng hoàn thiện,
-chưa phải hướng dẫn lắp máy đã được xác nhận đầu cuối.
+hoàn chỉnh. Bảng linh kiện còn thiếu một số mã mua hàng đã kiểm chứng. Main/HMI đã build và nạp OTA trên máy dự án ngày 05/11/2026. Hướng dẫn
+lắp máy chưa được xác nhận đầu cuối trên mọi phiên bản phần cứng.
 
 ## Cấu trúc
 
@@ -22,7 +20,7 @@ chưa phải hướng dẫn lắp máy đã được xác nhận đầu cuối.
 - `lib/`: thư viện và lớp tích hợp; nguồn gốc, bản upstream và tình trạng giấy phép nằm trong hồ sơ của từng thư viện.
 - `docs/`: hướng dẫn sử dụng và tài liệu kỹ thuật.
 
-Cấu hình build nằm trong `platformio.ini` và `hmi/platformio.ini`; chi tiết HMI ở `hmi/README.md`.
+Cấu hình build nằm trong `platformio.ini` và `hmi/platformio.ini`; bản Main Arduino 2.0.17 đang thử dùng `platformio.arduino2-test.ini`. Xem [INSTALL](docs/INSTALL.md) để chọn đúng cấu hình. Chi tiết [PID/bảo vệ nhiệt](docs/heater_temperature_filter.md) và [chẩn đoán Main](docs/main_runtime_diagnostics.md).
 
 ## Dữ liệu khi nâng cấp
 

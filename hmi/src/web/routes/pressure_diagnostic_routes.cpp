@@ -99,7 +99,7 @@ a{color:#83caff}button{padding:12px 16px;margin:5px;font:inherit;cursor:pointer}
 const endpoint='/api/pressure/capture', node=document.getElementById('status'), progress=document.getElementById('progress');
 const states=['Chưa có bản ghi','Đã chuẩn bị — tự bắt đầu pha trong 60 giây','Đang ghi ADC','Ghi xong','Đã hủy ghi','Hết thời gian chờ'];
 const errors=['','Main đang bận: về màn hình chờ, tắt pha/nước nóng','Yêu cầu không hợp lệ','Không đủ RAM Main','ADC chưa sẵn sàng hoặc chế độ chưa hỗ trợ','Bản ghi đã bị thay hoặc Main reboot'];
-let busy=false, latest=null;
+let busy=false, latest=null, refreshTask=null;
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function randomId(){return crypto.getRandomValues(new Uint32Array(1))[0]||1;}
 function show(s){latest=s;node.textContent=states[s.status]+'; '+s.total+' mẫu; mã '+s.capture_id+(s.fast_active?' — hãy dừng shot trước khi tải.':'');
@@ -125,7 +125,7 @@ async function rpc(op,capture=0,offset=0){
 }
 async function action(fn){
  if(busy)return;busy=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);
- try{await fn();}catch(e){node.textContent=e.message+'; dữ liệu chưa tải không bị xóa. Có thể thử lại.';}
+ try{if(refreshTask)await refreshTask;await fn();}catch(e){node.textContent=e.message+'; dữ liệu chưa tải không bị xóa. Có thể thử lại.';}
  finally{busy=false;document.querySelectorAll('button').forEach(b=>b.disabled=false);
  document.getElementById('download').disabled=!latest||!latest.total||latest.fast_active||latest.status===1||latest.status===2;}
 }
@@ -149,7 +149,15 @@ document.getElementById('download').onclick=()=>action(async()=>{
  const a=document.createElement('a');a.href=url;a.download='brewvector_adc_'+m.capture_id+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  progress.textContent='Đã tải '+m.total+' mẫu. Bản gốc vẫn trong RAM Main.';
 });
-async function refresh(){if(!busy)await action(async()=>show(await rpc(0)));}
+function refresh(){
+ if(busy||refreshTask)return;
+ refreshTask=(async()=>{
+  try{const s=await rpc(0);if(!busy)show(s);}
+  catch(e){if(!busy)node.textContent=e.message+'; dữ liệu chưa tải không bị xóa. Có thể thử lại.';}
+  finally{refreshTask=null;}
+ })();
+ return refreshTask;
+}
 refresh();setInterval(refresh,2000);
 </script></html>)HTML";
 }

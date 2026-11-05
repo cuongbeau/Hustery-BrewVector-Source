@@ -1,4 +1,5 @@
 #include "heater_control.h"
+#include "runtime_diagnostics.h"
 #include "src/control/heater_core.h"
 #include "config/hardware_pins.h"
 #include <Arduino.h>
@@ -13,6 +14,22 @@ HeaterControl::Core core;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 bool water = false, blocked = false, ready = false;
 bool powerOnPending = false;
+HeaterWire::Fault observedFault = HeaterWire::Fault::None;
+uint8_t latestSensorIssues = 0;
+uint32_t latestSensorFrame = 0;
+void recordFaultLocked() {
+  if (core.s.fault != HeaterWire::Fault::None && core.s.fault != observedFault) {
+    MainDiagnosticsWire::FaultEvent event;
+    event.atMs = millis(); event.fault = static_cast<uint8_t>(core.s.fault);
+    event.sampleAgeMs = core.sampled ? event.atMs - core.sampleAt : UINT32_MAX;
+    event.rawC = core.s.raw; event.filteredC = core.s.filtered;
+    event.sensorIssues = latestSensorIssues; event.sensorFrame = latestSensorFrame;
+    event.windowErrors = core.sensorWindow.errors; event.windowSamples = core.sensorWindow.count;
+    event.waterRunning = water;
+    RuntimeDiagnostics::fault(event);
+  }
+  observedFault = core.s.fault;
+}
 float inletPressure = 0, inletDuty = 0;
 #pragma pack(push, 1)
 struct LegacyConfig {
@@ -27,6 +44,7 @@ void task(void*) {
     portENTER_CRITICAL(&mux);
     core.tick(millis(), water);
     digitalWrite(SSR_HEATER_PIN, core.s.relay ? HIGH : LOW);
+    recordFaultLocked();
     portEXIT_CRITICAL(&mux);
     esp_task_wdt_reset();
     vTaskDelay(pdMS_TO_TICKS(10));
@@ -91,7 +109,13 @@ void begin() {
   if (watchdogStatus == ESP_OK)
     xTaskCreate(task, "Heater", 3072, nullptr, 2, nullptr);
 }
-void sample(float c) { portENTER_CRITICAL(&mux); core.sample(c, millis()); digitalWrite(SSR_HEATER_PIN, core.s.relay ? HIGH : LOW); portEXIT_CRITICAL(&mux); }
+void sample(float c, uint8_t issues, uint32_t frame) {
+  portENTER_CRITICAL(&mux);
+  latestSensorIssues = issues; latestSensorFrame = frame;
+  core.sample(c, millis()); digitalWrite(SSR_HEATER_PIN, core.s.relay ? HIGH : LOW);
+  recordFaultLocked();
+  portEXIT_CRITICAL(&mux);
+}
 void heartbeat(bool running, float estimatedFlow, bool valveOpen, bool flowValid, float pressure, float duty) {
   portENTER_CRITICAL(&mux);
   core.mainAt = millis(); water = running;
@@ -112,7 +136,7 @@ HeaterWire::Status status() { portENTER_CRITICAL(&mux); auto result = core.s; po
 void diagnostics(HeaterSensorWire::Status& result) {
   portENTER_CRITICAL(&mux);
   result.controlSamples = core.sensorWindow.count; result.controlErrors = core.sensorWindow.errors;
-  result.paused = core.sensorPaused;
+  result.paused = core.sensorPaused || core.overtempPending;
   result.densityPaused = core.sensorDensityPaused;
   result.thermalFeedforward = core.feedforward.output;
   result.inletFlow = core.inletFlow; result.feedforwardKff = core.feedforward.kff;
@@ -120,6 +144,12 @@ void diagnostics(HeaterSensorWire::Status& result) {
   result.inletValveOpen = core.inletValveOpen;
   result.pidPeriodMs = HeaterControlModel::PID_PERIOD_MS;
   result.inletPressure = inletPressure; result.inletDuty = inletDuty;
+  result.overtempPending = core.overtempPending;
+  // Preserve the v9 frame layout; null in JSON means the median is disabled.
+  result.medianTemperature = NAN;
+  result.overtempEvents = core.overtempEvents; result.overtempAt = core.overtempAt;
+  result.overtempPeak = core.overtempPeak;
+  result.overtempConfirmMs = HeaterControl::Core::HEAT_CONFIRM_MS;
   portEXIT_CRITICAL(&mux);
 }
 void request(const HeaterWire::Request& r, bool allowed) {
@@ -128,6 +158,7 @@ void request(const HeaterWire::Request& r, bool allowed) {
   core.s.result = core.command(r, millis(), allowed && !blocked && ready);
   core.s.ticket = r.ticket;
   digitalWrite(SSR_HEATER_PIN, core.s.relay ? HIGH : LOW);
+  recordFaultLocked();
   const bool save = r.op == HeaterWire::Op::Configure && core.s.result == HeaterWire::Result::Ok;
   const auto config = core.s.config;
   portEXIT_CRITICAL(&mux);

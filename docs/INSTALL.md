@@ -1,10 +1,9 @@
 # Cài đặt Hustery BrewVector
 
 Hướng dẫn này áp dụng cho source hiện tại: Main ESP32 DevKit V1 bản 38 chân
-(`esp32dev`) và HMI ESP32-S3 ES3C28P (`esp32-s3-devkitc-1`). Bản đổi tên
-BrewVector đã build thành công ngày 2026-10-26 nhưng chưa được xác nhận sau khi
-nạp lên máy thật; người làm theo cần kiểm tra phiên bản phần cứng
-và các mục chưa xác minh trước khi cấp điện cho tải.
+(`esp32dev`) và HMI ESP32-S3 ES3C28P (`esp32-s3-devkitc-1`). Main/HMI đã
+build và nạp OTA trên máy dự án ngày 05/11/2026. Người làm theo cần đối chiếu
+phiên bản phần cứng và các mục chưa xác minh trước khi cấp điện cho tải.
 
 ## 1. Đọc phần cứng
 
@@ -37,13 +36,25 @@ firmware được build với cấu hình đó.
 Từ thư mục gốc, chạy:
 
 ```powershell
-pio run -e esp32dev
+pio run -d . -e esp32dev
 pio run -d hmi -e esp32-s3-devkitc-1
 ```
 
 Hai file firmware sau build là `.pio/build/esp32dev/firmware.bin` và
 `hmi/.pio/build/esp32-s3-devkitc-1/firmware.bin`. Chúng dành cho **hai bo khác
 nhau**; kiểm tra tên môi trường trước khi nạp.
+
+### Build đúng bản Main đang được thử trên máy dự án
+
+Ngày 05/11/2026, Main đang chạy Arduino ESP32 2.0.17 / IDF 4.4.7, dùng bộ lọc nhiệt 0,3 giây đã bỏ trung vị. Để chọn đúng nền này:
+
+```powershell
+pio run -d . -e esp32dev -c platformio.arduino2-test.ini
+```
+
+File app nằm tại `tmp/pio-arduino2/build/esp32dev/firmware.bin`. Cấu hình này pin platform `espressif32@7.0.1`, dùng thư mục build riêng và giữ nguyên source. Nếu nạp USB bằng PlatformIO, dùng cùng `-c platformio.arduino2-test.ini` trong lệnh upload. Không lấy nhầm app từ `.pio/build/esp32dev` của cấu hình mặc định.
+
+HMI đã kiểm chứng bằng Arduino ESP32 3.1.1, platform 53.03.11. Hai cấu hình mặc định dùng `platform = espressif32` chưa pin phiên bản; đối chiếu log build vì môi trường cài đặt khác có thể chọn SDK khác. Bản đối chứng Arduino2 không tự chứng minh SDK là nguyên nhân lỗi nhiệt; xem [bộ lọc và kết quả thử](heater_temperature_filter.md).
 
 ## 3. Nạp USB lần đầu
 
@@ -75,11 +86,9 @@ profile chỉ dừng theo thời gian/điều kiện khác.
 
 ## 5. Trạng thái xác minh
 
-- Các bài kiểm tra Web/profile bằng Node đã qua trong đợt đổi tên.
-- Main ESP32 và HMI ESP32-S3 đã build thành công với PlatformIO ngày
-  2026-10-26; chưa xác nhận việc nạp hoặc chuyển dữ liệu profile/lịch sử trên
-  thiết bị.
-- HMI với trình tạo/chỉnh sửa profile tại chỗ và Web không đăng nhập đã build
-  thành công ngày 27/10/2026; chưa nạp/xác minh phần cứng trong lượt triển khai này.
+- Các bài kiểm tra core/PID/filter/decoder/diagnostic record và Web/transport/chart đã qua; Main/HMI rollback bộ lọc đã build, nạp và xác minh API/Web ngày 05/11/2026.
+- Bản HMI Web với editor theo khối và truy cập không đăng nhập đã build
+  ESP32-S3 thành công ngày 27/10/2026. Chưa nạp hoặc xác minh riêng việc chuyển
+  dữ liệu profile/lịch sử trên thiết bị trong lượt này.
 - Bảng linh kiện còn thiếu mã mua hàng của một số cảm biến, module công suất,
   nguồn và đầu nối. Xem cột trạng thái trong [sơ đồ đấu dây](wiring_diagram.md).

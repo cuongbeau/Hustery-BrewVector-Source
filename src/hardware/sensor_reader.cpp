@@ -20,10 +20,11 @@
 namespace SensorReader {
 
   // ======================= MAX31855 =======================
-  // Same BusIO software SPI pins/mode/rate as the previous Adafruit driver.
+  // 100 kHz software-SPI comparison: explicit half-clock delays in BusIO.
+  // Keep pins/mode, 250 ms acquisition cadence and heater fault policy unchanged.
   // Decode temperature and fault bits from ONE transaction, never readError()
   // in a second transaction that could describe another conversion.
-  static Adafruit_SPIDevice thermo(MAX31855_CS, MAX31855_SCK, MAX31855_SO, -1, 1000000);
+  static Adafruit_SPIDevice thermo(MAX31855_CS, MAX31855_SCK, MAX31855_SO, -1, 100000);
   static HeaterSensorWire::Status tempDiagnostics;
   static TemperatureErrorStats tempErrorStats;
   HeaterSensorWire::Status temperatureDiagnostics() {
@@ -103,7 +104,7 @@ namespace SensorReader {
         tempDiagnostics.lastErrorFrame = frame;
       }
       double c = issues ? NAN : Max31855Frame::celsius(frame);
-      Heater::sample(static_cast<float>(c));
+      Heater::sample(static_cast<float>(c), issues, frame);
       if (!isnan(c)) {
         tempC = (float)c;
         if (isnan(tempFilt)) tempFilt = tempC;

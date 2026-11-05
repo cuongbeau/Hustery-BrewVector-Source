@@ -1,6 +1,7 @@
 #pragma once
 #include "model/brew_stream.h"
 #include "heater_sensor_wire.h"
+#include "main_diagnostics.h"
 
 #include <Arduino.h>
 #include "hmi_protocol.h"
@@ -28,6 +29,8 @@ class MainLink {
   const HeaterSensorWire::Status& heaterSensorStatus() const { return heaterSensorStatus_; }
   bool heaterSensorFresh() const { return heaterFresh() && heaterSensorSeen_ && millis() - heaterSensorReceivedMs_ < 2000; }
   bool requestHeater(const HeaterWire::Request& request);
+  const MainDiagnosticsWire::Status& mainDiagnostics() const { return mainDiagnostics_; }
+  bool mainDiagnosticsFresh() const { return connected() && compatible() && mainDiagnosticsSeen_ && millis() - mainDiagnosticsAtMs_ < 3000; }
   void poll();
   bool connected() const;
   bool compatible() const;
@@ -179,6 +182,9 @@ class MainLink {
   AdcProbeWire::Reply adcProbeReply_{};
   HeaterWire::Status heaterStatus_{};
   HeaterSensorWire::Status heaterSensorStatus_{};
+  MainDiagnosticsWire::Status mainDiagnostics_{};
+  uint32_t mainDiagnosticsAtMs_ = 0;
+  bool mainDiagnosticsSeen_ = false;
   uint32_t heaterSensorReceivedMs_ = 0;
   bool heaterSensorSeen_ = false;
   uint32_t heaterReceivedMs_ = 0;

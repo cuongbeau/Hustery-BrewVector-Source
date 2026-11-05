@@ -40,12 +40,54 @@ class Core {
   float inletFlow = 0;
   bool inletValveOpen = false, inletFlowValid = false;
   bool previousWater = false;
+  // Provisional software policy; physical thermal protection remains necessary.
+  static constexpr uint32_t HEAT_CONFIRM_MS = 500, HEAT_SAMPLE_GAP_MS = 500;
+  bool overtempPending = false;
+  uint8_t hotSamples = 0, coolSamples = 0;
+  uint32_t hotAt = 0, coolAt = 0, heatSampleAt = 0;
+  uint32_t overtempEvents = 0, overtempAt = 0;
+  float overtempPeak = 0;
+  constexpr void holdOvertemp() {
+    s.power = 0; s.relay = 0; s.ready = 0; stableTracking = false;
+    feedforward.output = 0;
+  }
+  constexpr void checkTemperature(float value, uint32_t now) {
+    const float limit = s.config.ceiling > 0 ? s.config.ceiling : 150.0f;
+    // Extreme readings still latch immediately, independently of the filter.
+    if (value >= clamp(limit + 10, 0, 150)) { trip(Fault::Overtemp); return; }
+    if (now - heatSampleAt > HEAT_SAMPLE_GAP_MS) hotSamples = coolSamples = 0;
+    heatSampleAt = now;
+    if (value >= limit) {
+      if (!overtempPending) {
+        overtempPending = true; ++overtempEvents; overtempAt = now; overtempPeak = value;
+      }
+      if (value > overtempPeak) overtempPeak = value;
+      coolSamples = 0;
+      if (!hotSamples) hotAt = now;
+      if (hotSamples < 3) ++hotSamples;
+      holdOvertemp();
+      if (hotSamples >= 3 && now - hotAt >= HEAT_CONFIRM_MS) trip(Fault::Overtemp);
+    } else {
+      hotSamples = 0;
+      if (!overtempPending) return;
+      holdOvertemp();
+      if (value <= limit - 3 && s.filtered <= limit - 3 &&
+          sensorWindow.recovered() && !sensorPaused) {
+        if (!coolSamples) coolAt = now;
+        if (coolSamples < 3) ++coolSamples;
+        if (coolSamples >= 3 && now - coolAt >= HEAT_CONFIRM_MS) {
+          overtempPending = false; coolSamples = 0;
+        }
+      } else coolSamples = 0;
+    }
+  }
   constexpr void off(bool expired = false) {
     s.mode = s.fault == Fault::None ? Mode::Off : Mode::Fault;
     s.power = s.p = s.i = s.d = 0; s.relay = 0;
     s.idleExpired = expired;
     s.ready = 0; stableTracking = firstReady = false;
     sensorPaused = sensorDensityPaused = false;
+    overtempPending = false; hotSamples = coolSamples = 0;
     pid.reset(); temperatureRate.reset(); feedforward.reset();
     s.activeMaxPower = s.config.maxPower;
   }
@@ -63,7 +105,6 @@ class Core {
     if (!sampled || sensorWindow.failed()) trip(Fault::Sensor);
     else if (now - sampleAt > HeaterSensorPolicy::MAX_GOOD_AGE_MS) trip(Fault::Stale);
     else if (now - mainAt > 1000) trip(Fault::MainStalled);
-    else if (s.raw >= s.config.ceiling) trip(Fault::Overtemp);
     else if (sensorWindow.shouldPause()) pauseSensor(true);
     else if (now - sampleAt > HeaterSensorPolicy::PAUSE_GOOD_AGE_MS) pauseSensor();
   }
@@ -74,19 +115,21 @@ class Core {
     guardActive(now);
     if (bad) {
       s.valid = 0;
+      hotSamples = coolSamples = 0; // Invalid reads cannot confirm heat or recovery.
       if (sensorWindow.failed()) trip(Fault::Sensor);
       // Sensor holds the last accepted temperature; independent 1Hz PID may use it.
       return;
     }
-    const bool recovering = sensorPaused;
+    const bool recovering = sensorPaused || overtempPending;
     const bool first = !sampled || now - sampleAt > HeaterSensorPolicy::PAUSE_GOOD_AGE_MS;
     const float dt = first ? 0.25f : (now - sampleAt) / 1000.0f;
     const float previous = s.filtered;
     s.raw = value;
+    // Restore the original single 0.3s low-pass; no median-stage delay.
     s.filtered = first ? value : previous + (dt / (0.3f + dt)) * (value - previous);
     sampled = true; s.valid = 1; sampleAt = now;
-    const float limit = s.config.ceiling > 0 ? s.config.ceiling : 150.0f;
-    if (value >= limit) { trip(Fault::Overtemp); return; }
+    if (s.fault == Fault::None) checkTemperature(value, now);
+    if (s.fault != Fault::None) return;
     if (sensorWindow.failed()) { trip(Fault::Sensor); return; }
     temperatureRate.sample(s.filtered, now, first || recovering);
     if (active()) {
@@ -94,7 +137,7 @@ class Core {
         if (sensorWindow.recovered()) sensorPaused = sensorDensityPaused = false;
       } else sensorPaused = false;
     }
-    if (active() && sensorPaused) return;
+    if (overtempPending || (active() && sensorPaused)) return;
     if (s.mode != Mode::Pid || dt <= 0) return;
 
     if (first) { stableTracking = false; s.ready = 0; }
@@ -140,7 +183,7 @@ class Core {
       if (s.raw >= limit - 3 || sensorWindow.failed()) return Result::Unsafe;
       s.fault = Fault::None; off(); return Result::Ok;
     }
-    if (!validConfig(s.config) || s.raw >= s.config.ceiling - 3) return Result::Unsafe;
+    if (overtempPending || !validConfig(s.config) || s.raw >= s.config.ceiling - 3) return Result::Unsafe;
     if (sensorWindow.failed() || sensorWindow.shouldPause()) return Result::Unsafe;
     if (s.fault != Fault::None) return Result::Unsafe;
     if (r.op != Op::Enable && r.op != Op::Test) return Result::Invalid;
@@ -167,14 +210,14 @@ class Core {
     if (s.mode == Mode::Test && (water || now - testAt >= testDuration)) off();
     feedforward.kff = s.config.ffEnabled ? 100.0f/s.config.heaterW*s.config.ffScale : 0;
     feedforward.inletC = s.config.inletC;
-    const bool qualifiedWater = water && s.mode == Mode::Pid && !sensorPaused &&
+    const bool qualifiedWater = water && s.mode == Mode::Pid && !sensorPaused && !overtempPending &&
         s.config.ffEnabled && s.config.ffScale > 0 && inletValveOpen &&
         inletFlowValid && inletFlow > 0.01f && now-flowAt <= 1000;
     s.activeMaxPower = qualifiedWater && s.config.waterMaxPower > s.config.maxPower
         ? s.config.waterMaxPower : s.config.maxPower;
     // Cap withdrawal is independent of FF magnitude and the 1Hz PID schedule.
     if (s.mode == Mode::Pid && s.power > s.activeMaxPower) s.power = s.activeMaxPower;
-    if (s.mode == Mode::Pid && !sensorPaused) {
+    if (s.mode == Mode::Pid && !sensorPaused && !overtempPending) {
       // Raw temperature is the conservative upper-temperature check; the
       // filtered value remains the feedback input to the 1 Hz PID.
       const float hottestBody = s.raw > s.filtered ? s.raw : s.filtered;
@@ -183,11 +226,11 @@ class Core {
       if (now-pidAt >= HeaterControlModel::PID_PERIOD_MS) { pidAt = now; updatePid(); }
       else s.power = clamp(s.p+s.i+s.d+feedforward.output, 0, s.activeMaxPower);
     } else feedforward.output = 0;
-    if (s.mode == Mode::Test && !sensorPaused) s.power = testPower;
-    if (!active() || sensorPaused) s.power = 0;
+    if (s.mode == Mode::Test && !sensorPaused && !overtempPending) s.power = testPower;
+    if (!active() || sensorPaused || overtempPending) s.power = 0;
     s.idleRemaining = active() && s.config.autoSleep ? (now - activityAt >= idleMs ? 0 : idleMs - (now - activityAt)) : 0;
     if (now - windowAt >= 1000) windowAt = now;
-    s.relay = active() && !sensorPaused && s.power > 0 && now - windowAt < static_cast<uint32_t>(s.power * 10);
+    s.relay = active() && !sensorPaused && !overtempPending && s.power > 0 && now - windowAt < static_cast<uint32_t>(s.power * 10);
   }
 };
 }

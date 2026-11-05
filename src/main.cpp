@@ -1,6 +1,9 @@
 // Main owns control and persistence; all visual UI is on the separate HMI.
 #include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include "src/hardware/heater_control.h"
+#include "src/hardware/runtime_diagnostics.h"
 #include "src/hardware/pump_control.h"
 #include "src/control/heater_flow_model.h"
 #include "interfaces/system_state.h"
@@ -28,6 +31,7 @@ volatile float targetYieldGrams = 0.0f;
 
 void setup() {
   Heater::begin();
+  RuntimeDiagnostics::begin();
   Serial.begin(115200);
   delay(200);
   Serial.println("[Main] HMI-only display; local encoder and Recovery enabled");
@@ -63,4 +67,13 @@ void loop() {
   HmiLink::poll();
   // Keep recovery HTTP alive during OTA even when control is paused.
   RecoveryService::poll();
+  const auto heater = Heater::status();
+  RuntimeDiagnostics::poll(!HmiLink::firmwareUpdateActive() && !RecoveryPortal::updateActive() &&
+      Orchestrator::getState() == IDLE &&
+      (heater.mode == HeaterWire::Mode::Off || heater.mode == HeaterWire::Mode::Fault) &&
+      heater.power == 0 && !heater.relay);
+  // loopTask runs at priority 1 on CPU 1. yield() alone cannot schedule its
+  // priority-0 idle task; block for one tick on every path, including OTA.
+  // ADC, pump and heater keep their own independent task cadences.
+  vTaskDelay(1);
 }

@@ -22,7 +22,7 @@ const core=fs.readFileSync('hmi/src/web/web_js_core.h','utf8').match(/R"JS\(([\s
 function jobHarness(){const h=harness();h.run(core.slice(core.indexOf('  async function httpJSONRequest'),core.indexOf('  // ===== Tabs')));return h;}
 function heaterHarness(){
   const h=harness(),elements=new Map();
-  function el(id){id=id.startsWith('heat_')?id:'heat_'+id;if(!elements.has(id))elements.set(id,{id,textContent:'',className:'',value:'',disabled:false,append(){},getContext(){return {beginPath(){},moveTo(){},lineTo(){},stroke(){},clearRect(){},strokeRect(){},fillText(){},setLineDash(){}}},clientWidth:300});return elements.get(id);}
+  function el(id){id=id.startsWith('heat_')?id:'heat_'+id;if(id==='heat_mainDiagnostic')return null;if(!elements.has(id))elements.set(id,{id,textContent:'',className:'',value:'',disabled:false,append(){},getContext(){return {beginPath(){},moveTo(){},lineTo(){},stroke(){},clearRect(){},strokeRect(){},fillText(){},setLineDash(){}}},clientWidth:300});return elements.get(id);}
   h.context.document={hidden:false,getElementById:el,createElement:()=>({append(){}}),querySelectorAll:()=>[el('mut')]};
   const source=fs.readFileSync('hmi/web/heater.js','utf8')
     .replace('return {send,download,setActive};','return {send,download,setActive,poll};');
